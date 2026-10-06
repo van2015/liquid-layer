@@ -92,3 +92,36 @@ export const userPositionsWithWethDebtFixture = {
     ],
   },
 } as const
+
+export const userPositionsWithWethSupplyFixture = {
+  data: {
+    borrows: [
+      {
+        currency: {
+          address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+          symbol: 'USDC',
+          decimals: 6,
+        },
+        debt: {
+          amount: { value: '41501.683598' },
+          usd: '41496.329880815858',
+        },
+      },
+    ],
+    supplies: [
+      {
+        currency: {
+          address: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
+          symbol: 'WETH',
+          decimals: 18,
+        },
+        balance: {
+          amount: { value: '26.512887202828885925' },
+          usd: '71736.896200471362075289203173',
+          usdPerToken: '2705.73686116',
+        },
+        isCollateral: true,
+      },
+    ],
+  },
+} as const

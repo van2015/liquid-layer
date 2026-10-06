@@ -211,6 +211,23 @@ export class AaveProvider {
         },
       }
     }
+    const supply = positions.value.supplies.find(
+      (entry) =>
+        entry.currency.address.toLowerCase() ===
+        this.config.underlyingToken.toLowerCase(),
+    )
+    if (supply !== undefined) {
+      return {
+        success: true,
+        value: {
+          id: this.positionId(),
+          side: Side.Short,
+          size: parseFloat(supply.balance.amount.value),
+          entryPrice: parseFloat(supply.balance.usdPerToken),
+          exitPrice: undefined,
+        },
+      }
+    }
     return { success: false, error: { type: 'PositionNotFound', id } }
   }
 }

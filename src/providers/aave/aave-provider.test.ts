@@ -7,6 +7,7 @@ import {
   userPositionsWithSupplyFixture,
   userNoPositionFixture,
   userPositionsWithWethDebtFixture,
+  userPositionsWithWethSupplyFixture,
 } from '../../test-support/aave-fixtures'
 import { AaveProvider } from './aave-provider'
 import { GRAPHQL_URL } from './types'
@@ -276,6 +277,37 @@ describe('AaveProvider', () => {
       expect(result.value.side).toBe(Side.Long)
       expect(result.value.size).toBeCloseTo(0.025294505537082373, 15)
       expect(result.value.entryPrice).toBeCloseTo(2717.27, 1)
+      expect(result.value.exitPrice).toBeUndefined()
+    }
+  })
+
+  it('reads a short position from the user supply of the reserve', async () => {
+    const fetchFn = vi.fn(
+      async (
+        _input: string | URL | Request,
+        _init?: RequestInit,
+      ): Promise<Response> =>
+        new Response(JSON.stringify(userPositionsWithWethSupplyFixture), {
+          status: 200,
+        }),
+    )
+    const provider = new AaveProvider({
+      fetchFn,
+      market: MARKET,
+      underlyingToken: WETH,
+      chainId: '1',
+      user: '0x3FCA83e0Dec167f1348CB01c7dF5437F9ff6EBE6',
+    })
+    const positionId = `1:${MARKET}:${WETH}`
+
+    const result = await provider.getPosition(positionId)
+
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.value.id).toBe(positionId)
+      expect(result.value.side).toBe(Side.Short)
+      expect(result.value.size).toBeCloseTo(26.512887202828885925, 15)
+      expect(result.value.entryPrice).toBeCloseTo(2705.73686116, 6)
       expect(result.value.exitPrice).toBeUndefined()
     }
   })
