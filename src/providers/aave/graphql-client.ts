@@ -17,6 +17,16 @@ function hasGraphQLErrors(body: unknown): boolean {
   return Array.isArray(errors) && errors.length > 0
 }
 
+function parseGraphQLBody<T>(body: unknown): Result<T, UpstreamFailure> {
+  if (hasGraphQLErrors(body)) {
+    return { success: false, error: graphQLFailure() }
+  }
+  if (typeof body !== 'object' || body === null || !('data' in body)) {
+    return { success: false, error: graphQLFailure() }
+  }
+  return { success: true, value: (body as { data: T }).data }
+}
+
 export async function postGraphQL<T>(
   fetchFn: FetchLike,
   url: string,
@@ -42,11 +52,5 @@ export async function postGraphQL<T>(
   } catch {
     return { success: false, error: graphQLFailure() }
   }
-  if (hasGraphQLErrors(body)) {
-    return { success: false, error: graphQLFailure() }
-  }
-  if (typeof body !== 'object' || body === null || !('data' in body)) {
-    return { success: false, error: graphQLFailure() }
-  }
-  return { success: true, value: (body as { data: T }).data }
+  return parseGraphQLBody<T>(body)
 }
