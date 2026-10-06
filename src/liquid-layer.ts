@@ -111,7 +111,16 @@ export class LiquidLayer {
   closePosition(
     id: string,
     exitPrice: number,
-  ): Result<{ realizedPnl: number; position: Position }, PositionNotFound> {
+  ): Result<
+    { realizedPnl: number; position: Position },
+    PositionNotFound | InvalidPrice
+  > {
+    if (exitPrice <= 0) {
+      return {
+        success: false,
+        error: { type: 'InvalidPrice', price: exitPrice },
+      }
+    }
     const found = this.provider.getPosition(id)
     if (!found.success) {
       return found
