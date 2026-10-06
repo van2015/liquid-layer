@@ -397,6 +397,21 @@ describe('LiquidLayer', () => {
     expect(settleFunding).not.toHaveBeenCalled()
   })
 
+  it('rejects computing equity with a non-positive mark price', () => {
+    const getPosition = vi.fn(() => ({
+      success: true as const,
+      value: aPosition().id('pos-1').long().size(1).entryPrice(60000).build(),
+    }))
+    const { provider } = fakeCollateralProvider(6000, { getPosition })
+    const layer = new LiquidLayer(provider)
+
+    expect(layer.getEquity('pos-1', -100)).toEqual({
+      success: false,
+      error: { type: 'InvalidPrice', price: -100 },
+    })
+    expect(getPosition).not.toHaveBeenCalled()
+  })
+
   it('charges funding on a long position and reduces the collateral balance', () => {
     const getPosition = vi.fn(
       (id: string): Result<Position, PositionNotFound> => ({

@@ -228,7 +228,13 @@ export class LiquidLayer {
     return this.provider.listPositions()
   }
 
-  getEquity(id: string, markPrice: number): Result<number, PositionNotFound> {
+  getEquity(
+    id: string,
+    markPrice: number,
+  ): Result<number, InvalidPrice | PositionNotFound> {
+    if (markPrice <= 0) {
+      return fail({ type: 'InvalidPrice', price: markPrice })
+    }
     const found = this.provider.getPosition(id)
     if (!found.success) {
       return found
