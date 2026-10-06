@@ -247,4 +247,8 @@ export class AaveProvider {
     }
     return { success: true, value: [position.value] }
   }
+
+  async settlePnl(_amount: number): Promise<Result<void, UpstreamFailure>> {
+    return { success: true, value: undefined }
+  }
 }
