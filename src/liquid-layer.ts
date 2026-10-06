@@ -102,8 +102,14 @@ export class LiquidLayer {
     return { success: true, value: { realizedPnl, position } }
   }
 
-  depositCollateral(amount: number): number {
-    return this.provider.depositCollateral(amount)
+  depositCollateral(amount: number): Result<number, InvalidAmount> {
+    if (amount < 0) {
+      return {
+        success: false,
+        error: { type: 'InvalidAmount', amount },
+      }
+    }
+    return { success: true, value: this.provider.depositCollateral(amount) }
   }
 
   withdrawCollateral(

@@ -104,11 +104,22 @@ describe('LiquidLayer', () => {
     const { provider, depositCollateral } = fakeCollateralProvider()
     const layer = new LiquidLayer(provider)
 
-    const updatedBalance = layer.depositCollateral(1000)
+    const result = layer.depositCollateral(1000)
 
-    expect(updatedBalance).toBe(1000)
+    expect(result).toEqual({ success: true, value: 1000 })
     expect(depositCollateral).toHaveBeenCalledTimes(1)
     expect(depositCollateral).toHaveBeenCalledWith(1000)
+  })
+
+  it('rejects depositing a negative amount', () => {
+    const { provider, depositCollateral } = fakeCollateralProvider(500)
+    const layer = new LiquidLayer(provider)
+
+    expect(layer.depositCollateral(-100)).toEqual({
+      success: false,
+      error: { type: 'InvalidAmount', amount: -100 },
+    })
+    expect(depositCollateral).not.toHaveBeenCalled()
   })
 
   it('a consumer withdraws collateral and sees the updated balance', () => {
