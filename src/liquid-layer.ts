@@ -264,10 +264,15 @@ export class LiquidLayer {
     }
   }
 
-  payFunding(id: string): Result<void, PositionNotFound> {
+  payFunding(
+    id: string,
+  ): Result<void, PositionNotFound | PositionAlreadyClosed> {
     const found = this.provider.getPosition(id)
     if (!found.success) {
       return found
+    }
+    if (found.value.exitPrice !== undefined) {
+      return fail({ type: 'PositionAlreadyClosed', id })
     }
     const { size, entryPrice, side } = found.value
     const amount = size * entryPrice * this.provider.getFundingRate()
