@@ -4,8 +4,15 @@ import {
   type LiquidityProvider,
   type Position,
   type Result,
+  type TransactionRequest,
   type UpstreamFailure,
 } from '../liquid-layer'
+
+export const preparedTx: TransactionRequest = {
+  to: '0x000000000000000000000000000000000000dead',
+  data: '0x',
+  value: '0',
+}
 
 export function fakeProvider(
   overrides: Partial<LiquidityProvider> = {},

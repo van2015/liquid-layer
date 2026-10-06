@@ -16,96 +16,62 @@ import { aPosition } from './test-support/position-builder'
 
 describe('LiquidLayer', async () => {
   it('a consumer opens a long position through LiquidLayer without knowing the underlying liquidity provider', async () => {
-    const openPosition = vi.fn(
-      async (
-        side: Side,
-        size: number,
-        entryPrice: number,
-      ): Promise<Position> =>
-        aPosition()
-          .id('pos-1')
-          .side(side)
-          .size(size)
-          .entryPrice(entryPrice)
-          .build(),
-    )
+    const openPosition = vi.fn(async () => ({
+      success: true as const,
+      value: preparedTx,
+    }))
     const provider = fakeProvider({ openPosition })
     const layer = new LiquidLayer(provider)
 
     const result = await layer.openPosition(Side.Long, 1, 60000)
 
-    expect(result).toEqual({
-      success: true,
-      value: aPosition().id('pos-1').long().size(1).entryPrice(60000).build(),
-    })
+    expect(result).toEqual({ success: true, value: preparedTx })
     expect(openPosition).toHaveBeenCalledTimes(1)
     expect(openPosition).toHaveBeenCalledWith(Side.Long, 1, 60000)
   })
 
   it('a consumer closes a long position and the layer calculates the realized PnL', async () => {
-    const closePosition = vi.fn(
-      async (id: string, exitPrice: number): Promise<Position> =>
-        aPosition()
-          .id(id)
-          .long()
-          .size(1)
-          .entryPrice(60000)
-          .exitPrice(exitPrice)
-          .build(),
-    )
-    const provider = fakeProvider({ closePosition })
+    const closePosition = vi.fn(async () => ({
+      success: true as const,
+      value: preparedTx,
+    }))
+    const provider = fakeProvider({
+      closePosition,
+      getPosition: vi.fn(async () => ({
+        success: true as const,
+        value: aPosition().id('pos-1').long().size(1).entryPrice(60000).build(),
+      })),
+    })
     const layer = new LiquidLayer(provider)
 
     const result = await layer.closePosition('pos-1', 61000)
 
-    expect(result).toEqual({
-      success: true,
-      value: {
-        realizedPnl: 1000,
-        position: aPosition()
-          .id('pos-1')
-          .long()
-          .size(1)
-          .entryPrice(60000)
-          .exitPrice(61000)
-          .build(),
-      },
-    })
+    expect(result).toEqual({ success: true, value: preparedTx })
     expect(closePosition).toHaveBeenCalledTimes(1)
     expect(closePosition).toHaveBeenCalledWith('pos-1', 61000)
+    expect(provider.settlePnl).toHaveBeenCalledWith(1000)
   })
 
   it('closes a short position and calculates PnL with inverted direction', async () => {
-    const closePosition = vi.fn(
-      async (id: string, exitPrice: number): Promise<Position> =>
-        aPosition()
-          .id(id)
-          .short()
-          .size(1)
-          .entryPrice(60000)
-          .exitPrice(exitPrice)
-          .build(),
-    )
-    const provider = fakeProvider({ closePosition })
+    const closePosition = vi.fn(async () => ({
+      success: true as const,
+      value: preparedTx,
+    }))
+    const provider = fakeProvider({
+      closePosition,
+      getPosition: vi.fn(async () => ({
+        success: true as const,
+        value: aPosition().id('pos-2').short().size(1).entryPrice(60000).build(),
+      })),
+    })
     const layer = new LiquidLayer(provider)
 
     const result = await layer.closePosition('pos-2', 59000)
 
-    expect(result).toEqual({
-      success: true,
-      value: {
-        realizedPnl: 1000,
-        position: aPosition()
-          .id('pos-2')
-          .short()
-          .size(1)
-          .entryPrice(60000)
-          .exitPrice(59000)
-          .build(),
-      },
-    })
+    expect(result).toEqual({ success: true, value: preparedTx })
     expect(closePosition).toHaveBeenCalledTimes(1)
     expect(closePosition).toHaveBeenCalledWith('pos-2', 59000)
+    expect(provider.settlePnl).toHaveBeenCalledWith(1000)
   })
 
   it('a consumer deposits collateral and sees the updated balance without knowing which protocol holds it', async () => {
@@ -228,36 +194,22 @@ describe('LiquidLayer', async () => {
   })
 
   it('settles the realized PnL into the collateral balance when a position is closed', async () => {
-    const closePosition = vi.fn(
-      async (id: string, exitPrice: number): Promise<Position> =>
-        aPosition()
-          .id(id)
-          .long()
-          .size(1)
-          .entryPrice(60000)
-          .exitPrice(exitPrice)
-          .build(),
-    )
+    const closePosition = vi.fn(async () => ({
+      success: true as const,
+      value: preparedTx,
+    }))
     const { provider, settlePnl } = fakeCollateralProvider(5000, {
       closePosition,
+      getPosition: vi.fn(async () => ({
+        success: true as const,
+        value: aPosition().id('pos-1').long().size(1).entryPrice(60000).build(),
+      })),
     })
     const layer = new LiquidLayer(provider)
 
     const result = await layer.closePosition('pos-1', 61000)
 
-    expect(result).toEqual({
-      success: true,
-      value: {
-        realizedPnl: 1000,
-        position: aPosition()
-          .id('pos-1')
-          .long()
-          .size(1)
-          .entryPrice(60000)
-          .exitPrice(61000)
-          .build(),
-      },
-    })
+    expect(result).toEqual({ success: true, value: preparedTx })
     expect(await layer.getCollateralBalance()).toEqual({ success: true, value: 6000 })
     expect(settlePnl).toHaveBeenCalledTimes(1)
     expect(settlePnl).toHaveBeenCalledWith(1000)
@@ -335,9 +287,9 @@ describe('LiquidLayer', async () => {
   })
 
   it('liquidates a position when equity falls below the maintenance margin', async () => {
-    const closePosition = vi.fn(async (id: string, exitPrice: number) => ({
-      ...aPosition().id(id).long().size(1).entryPrice(60000).build(),
-      exitPrice,
+    const closePosition = vi.fn(async () => ({
+      success: true as const,
+      value: preparedTx,
     }))
     const { provider, settlePnl, getCollateralBalance } =
       fakeCollateralProvider(6000, {
@@ -356,7 +308,12 @@ describe('LiquidLayer', async () => {
 
     expect(await layer.checkLiquidation('pos-1', 55000)).toEqual({
       success: true,
-      value: { liquidated: true, exitPrice: 55000, realizedPnl: -5000 },
+      value: {
+        liquidated: true,
+        exitPrice: 55000,
+        realizedPnl: -5000,
+        tx: preparedTx,
+      },
     })
     expect(closePosition).toHaveBeenCalledWith('pos-1', 55000)
     expect(settlePnl).toHaveBeenCalledWith(-5000)
@@ -526,16 +483,10 @@ describe('LiquidLayer', async () => {
   })
 
   it('rejects closing a position that does not exist', async () => {
-    const closePosition = vi.fn(
-      async (id: string, exitPrice: number): Promise<Position> =>
-        aPosition()
-          .id(id)
-          .long()
-          .size(1)
-          .entryPrice(60000)
-          .exitPrice(exitPrice)
-          .build(),
-    )
+    const closePosition = vi.fn(async () => ({
+      success: true as const,
+      value: preparedTx,
+    }))
     const getPosition = vi.fn(
       async (
         id: string,
@@ -652,10 +603,10 @@ describe('LiquidLayer', async () => {
         success: true as const,
         value: aPosition().id('pos-1').long().size(1).entryPrice(60000).build(),
       })),
-      closePosition: vi.fn(
-        async (id: string, exitPrice: number): Promise<Position> =>
-          aPosition().id(id).long().size(1).entryPrice(60000).exitPrice(exitPrice).build(),
-      ),
+      closePosition: vi.fn(async () => ({
+        success: true as const,
+        value: preparedTx,
+      })),
     })
     const layer = new LiquidLayer(provider)
 

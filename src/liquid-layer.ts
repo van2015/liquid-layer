@@ -70,8 +70,25 @@ export interface Position {
 }
 
 export interface LiquidityProvider {
-  openPosition(side: Side, size: number, entryPrice: number): Promise<Position>
-  closePosition(id: string, exitPrice: number): Promise<Position>
+  openPosition(
+    side: Side,
+    size: number,
+    entryPrice: number,
+  ): Promise<
+    Result<
+      TransactionRequest,
+      InsufficientMargin | InvalidSize | InvalidPrice | UpstreamFailure
+    >
+  >
+  closePosition(
+    id: string,
+    exitPrice: number,
+  ): Promise<
+    Result<
+      TransactionRequest,
+      PositionNotFound | PositionAlreadyClosed | UpstreamFailure
+    >
+  >
   depositCollateral(
     amount: number,
   ): Promise<Result<TransactionRequest, InvalidAmount | UpstreamFailure>>
@@ -124,7 +141,7 @@ export class LiquidLayer {
     entryPrice: number,
   ): Promise<
     Result<
-      Position,
+      TransactionRequest,
       InsufficientMargin | InvalidSize | InvalidPrice | UpstreamFailure
     >
   > {
@@ -153,10 +170,7 @@ export class LiquidLayer {
         available: balance.value,
       })
     }
-    return {
-      success: true,
-      value: await this.provider.openPosition(side, size, entryPrice),
-    }
+    return this.provider.openPosition(side, size, entryPrice)
   }
 
   async closePosition(
@@ -164,7 +178,7 @@ export class LiquidLayer {
     exitPrice: number,
   ): Promise<
     Result<
-      { realizedPnl: number; position: Position },
+      TransactionRequest,
       | PositionNotFound
       | InvalidPrice
       | PositionAlreadyClosed
@@ -206,20 +220,26 @@ export class LiquidLayer {
     id: string,
     exitPrice: number,
   ): Promise<
-    Result<{ realizedPnl: number; position: Position }, UpstreamFailure>
+    Result<
+      TransactionRequest,
+      PositionNotFound | PositionAlreadyClosed | UpstreamFailure
+    >
   > {
-    const position = await this.provider.closePosition(id, exitPrice)
+    const closed = await this.provider.closePosition(id, exitPrice)
+    if (!closed.success) {
+      return closed
+    }
     const realizedPnl = pnl(
-      position.side,
-      position.entryPrice,
+      current.side,
+      current.entryPrice,
       exitPrice,
-      position.size,
+      current.size,
     )
     const settled = await this.provider.settlePnl(realizedPnl)
     if (!settled.success) {
       return settled
     }
-    return { success: true, value: { realizedPnl, position } }
+    return closed
   }
 
   private async ensureOpen(
@@ -353,7 +373,12 @@ export class LiquidLayer {
     markPrice: number,
   ): Promise<
     Result<
-      { liquidated: boolean; exitPrice?: number; realizedPnl?: number },
+      {
+        liquidated: boolean
+        exitPrice?: number
+        realizedPnl?: number
+        tx?: TransactionRequest
+      },
       PositionNotFound | InvalidPrice | PositionAlreadyClosed | UpstreamFailure
     >
   > {
@@ -381,12 +406,19 @@ export class LiquidLayer {
     if (!settled.success) {
       return settled
     }
+    const realizedPnl = pnl(
+      position.side,
+      position.entryPrice,
+      markPrice,
+      position.size,
+    )
     return {
       success: true,
       value: {
         liquidated: true,
         exitPrice: markPrice,
-        realizedPnl: settled.value.realizedPnl,
+        realizedPnl,
+        tx: settled.value,
       },
     }
   }

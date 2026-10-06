@@ -6,13 +6,9 @@ import {
   type TransactionRequest,
   type UpstreamFailure,
 } from '../liquid-layer'
-import { fakeProvider } from './fake-provider'
+import { fakeProvider, preparedTx } from './fake-provider'
 
-export const preparedTx: TransactionRequest = {
-  to: '0x000000000000000000000000000000000000dead',
-  data: '0x',
-  value: '0',
-}
+export { preparedTx }
 
 export function fakeCollateralProvider(
   initialBalance = 0,
