@@ -341,6 +341,26 @@ describe('LiquidLayer', () => {
     expect(getCollateralBalance()).toBe(1000)
   })
 
+  it('rejects closing a position that was already closed', () => {
+    const { provider, settlePnl } = fakeCollateralProvider(6000, {
+      getPosition: vi.fn(() => ({
+        success: true as const,
+        value: {
+          ...aPosition().id('pos-1').long().size(1).entryPrice(60000).build(),
+          exitPrice: 55000,
+        },
+      })),
+    })
+    const layer = new LiquidLayer(provider)
+
+    expect(layer.closePosition('pos-1', 56000)).toEqual({
+      success: false,
+      error: { type: 'PositionAlreadyClosed', id: 'pos-1' },
+    })
+    expect(provider.closePosition).not.toHaveBeenCalled()
+    expect(settlePnl).not.toHaveBeenCalled()
+  })
+
   it('charges funding on a long position and reduces the collateral balance', () => {
     const getPosition = vi.fn(
       (id: string): Result<Position, PositionNotFound> => ({

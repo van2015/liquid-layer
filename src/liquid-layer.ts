@@ -20,6 +20,11 @@ export type PositionNotFound = {
   readonly id: string
 }
 
+export type PositionAlreadyClosed = {
+  readonly type: 'PositionAlreadyClosed'
+  readonly id: string
+}
+
 export type InsufficientBalance = {
   readonly type: 'InsufficientBalance'
   readonly requested: Money
@@ -118,7 +123,7 @@ export class LiquidLayer {
     exitPrice: number,
   ): Result<
     { realizedPnl: number; position: Position },
-    PositionNotFound | InvalidPrice
+    PositionNotFound | InvalidPrice | PositionAlreadyClosed
   > {
     if (exitPrice <= 0) {
       return fail({ type: 'InvalidPrice', price: exitPrice })
@@ -126,6 +131,9 @@ export class LiquidLayer {
     const found = this.provider.getPosition(id)
     if (!found.success) {
       return found
+    }
+    if (found.value.exitPrice !== undefined) {
+      return fail({ type: 'PositionAlreadyClosed', id })
     }
     const position = this.provider.closePosition(id, exitPrice)
     const realizedPnl = pnl(
@@ -194,7 +202,7 @@ export class LiquidLayer {
     markPrice: number,
   ): Result<
     { liquidated: boolean; exitPrice?: number; realizedPnl?: number },
-    PositionNotFound | InvalidPrice
+    PositionNotFound | InvalidPrice | PositionAlreadyClosed
   > {
     const found = this.provider.getPosition(id)
     if (!found.success) {
