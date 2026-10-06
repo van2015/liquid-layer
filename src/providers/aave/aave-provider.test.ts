@@ -69,4 +69,24 @@ describe('AaveProvider', () => {
     const body = JSON.parse(String(init?.body)) as { query: string }
     expect(body.query).toContain('liquidationThreshold { value }')
   })
+
+  it('propagates an upstream failure when the reserve cannot be read', async () => {
+    const fetchFn = vi.fn(
+      async (): Promise<Response> =>
+        new Response('internal error', { status: 500 }),
+    )
+    const provider = new AaveProvider({
+      fetchFn,
+      market: MARKET,
+      underlyingToken: WETH,
+      chainId: '1',
+    })
+
+    const result = await provider.getRequiredMargin(Side.Long, 1, 60000)
+
+    expect(result).toEqual({
+      success: false,
+      error: { type: 'UpstreamFailure', operation: 'postGraphQL' },
+    })
+  })
 })
