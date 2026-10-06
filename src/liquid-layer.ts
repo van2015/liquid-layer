@@ -12,55 +12,48 @@ export interface Position {
 }
 
 export interface LiquidityProvider {
-  openPosition(params: {
-    side: Side
-    size: number
-    entryPrice: number
-  }): Position
-  closePosition(params: { id: string; exitPrice: number }): Position
-  depositCollateral(params: { amount: number }): number
-  withdrawCollateral(params: { amount: number }): number
+  openPosition(side: Side, size: number, entryPrice: number): Position
+  closePosition(id: string, exitPrice: number): Position
+  depositCollateral(amount: number): number
+  withdrawCollateral(amount: number): number
+  settlePnl(amount: number): number
   getCollateralBalance(): number
-  getRequiredMargin(params: {
-    side: Side
-    size: number
-    entryPrice: number
-  }): number
+  getRequiredMargin(side: Side, size: number, entryPrice: number): number
 }
 
 export class LiquidLayer {
   constructor(private readonly provider: LiquidityProvider) {}
 
-  openPosition(params: {
-    side: Side
-    size: number
-    entryPrice: number
-  }): Position {
-    const requiredMargin = this.provider.getRequiredMargin(params)
+  openPosition(side: Side, size: number, entryPrice: number): Position {
+    const requiredMargin = this.provider.getRequiredMargin(
+      side,
+      size,
+      entryPrice,
+    )
     const balance = this.provider.getCollateralBalance()
     if (balance < requiredMargin) {
       throw new Error('insufficient margin')
     }
-    return this.provider.openPosition(params)
+    return this.provider.openPosition(side, size, entryPrice)
   }
 
-  closePosition(params: {
-    id: string
-    exitPrice: number
-  }): { realizedPnl: number; position: Position } {
-    const position = this.provider.closePosition(params)
+  closePosition(
+    id: string,
+    exitPrice: number,
+  ): { realizedPnl: number; position: Position } {
+    const position = this.provider.closePosition(id, exitPrice)
     const direction = position.side === Side.Long ? 1 : -1
-    const realizedPnl =
-      (params.exitPrice - position.entryPrice) * position.size * direction
+    const realizedPnl = (exitPrice - position.entryPrice) * position.size * direction
+    this.provider.settlePnl(realizedPnl)
     return { realizedPnl, position }
   }
 
-  depositCollateral(params: { amount: number }): number {
-    return this.provider.depositCollateral(params)
+  depositCollateral(amount: number): number {
+    return this.provider.depositCollateral(amount)
   }
 
-  withdrawCollateral(params: { amount: number }): number {
-    return this.provider.withdrawCollateral(params)
+  withdrawCollateral(amount: number): number {
+    return this.provider.withdrawCollateral(amount)
   }
 
   getCollateralBalance(): number {

@@ -7,49 +7,41 @@ import { aPosition } from './test-support/position-builder'
 describe('LiquidLayer', () => {
   it('a consumer opens a long position through LiquidLayer without knowing the underlying liquidity provider', () => {
     const openPosition = vi.fn(
-      (params: { side: Side; size: number; entryPrice: number }): Position =>
+      (side: Side, size: number, entryPrice: number): Position =>
         aPosition()
           .id('pos-1')
-          .side(params.side)
-          .size(params.size)
-          .entryPrice(params.entryPrice)
+          .side(side)
+          .size(size)
+          .entryPrice(entryPrice)
           .build(),
     )
     const provider = fakeProvider({ openPosition })
     const layer = new LiquidLayer(provider)
 
-    const position = layer.openPosition({
-      side: Side.Long,
-      size: 1,
-      entryPrice: 60000,
-    })
+    const position = layer.openPosition(Side.Long, 1, 60000)
 
     expect(position).toEqual(
       aPosition().id('pos-1').long().size(1).entryPrice(60000).build(),
     )
     expect(openPosition).toHaveBeenCalledTimes(1)
-    expect(openPosition).toHaveBeenCalledWith({
-      side: Side.Long,
-      size: 1,
-      entryPrice: 60000,
-    })
+    expect(openPosition).toHaveBeenCalledWith(Side.Long, 1, 60000)
   })
 
   it('a consumer closes a long position and the layer calculates the realized PnL', () => {
     const closePosition = vi.fn(
-      (params: { id: string; exitPrice: number }): Position =>
+      (id: string, exitPrice: number): Position =>
         aPosition()
-          .id(params.id)
+          .id(id)
           .long()
           .size(1)
           .entryPrice(60000)
-          .exitPrice(params.exitPrice)
+          .exitPrice(exitPrice)
           .build(),
     )
     const provider = fakeProvider({ closePosition })
     const layer = new LiquidLayer(provider)
 
-    const result = layer.closePosition({ id: 'pos-1', exitPrice: 61000 })
+    const result = layer.closePosition('pos-1', 61000)
 
     expect(result.realizedPnl).toBe(1000)
     expect(result.position).toEqual(
@@ -62,27 +54,24 @@ describe('LiquidLayer', () => {
         .build(),
     )
     expect(closePosition).toHaveBeenCalledTimes(1)
-    expect(closePosition).toHaveBeenCalledWith({
-      id: 'pos-1',
-      exitPrice: 61000,
-    })
+    expect(closePosition).toHaveBeenCalledWith('pos-1', 61000)
   })
 
   it('closes a short position and calculates PnL with inverted direction', () => {
     const closePosition = vi.fn(
-      (params: { id: string; exitPrice: number }): Position =>
+      (id: string, exitPrice: number): Position =>
         aPosition()
-          .id(params.id)
+          .id(id)
           .short()
           .size(1)
           .entryPrice(60000)
-          .exitPrice(params.exitPrice)
+          .exitPrice(exitPrice)
           .build(),
     )
     const provider = fakeProvider({ closePosition })
     const layer = new LiquidLayer(provider)
 
-    const result = layer.closePosition({ id: 'pos-2', exitPrice: 59000 })
+    const result = layer.closePosition('pos-2', 59000)
 
     expect(result.realizedPnl).toBe(1000)
     expect(result.position).toEqual(
@@ -95,42 +84,39 @@ describe('LiquidLayer', () => {
         .build(),
     )
     expect(closePosition).toHaveBeenCalledTimes(1)
-    expect(closePosition).toHaveBeenCalledWith({
-      id: 'pos-2',
-      exitPrice: 59000,
-    })
+    expect(closePosition).toHaveBeenCalledWith('pos-2', 59000)
   })
 
   it('a consumer deposits collateral and sees the updated balance without knowing which protocol holds it', () => {
     const { provider, depositCollateral } = fakeCollateralProvider()
     const layer = new LiquidLayer(provider)
 
-    const updatedBalance = layer.depositCollateral({ amount: 1000 })
+    const updatedBalance = layer.depositCollateral(1000)
 
     expect(updatedBalance).toBe(1000)
     expect(depositCollateral).toHaveBeenCalledTimes(1)
-    expect(depositCollateral).toHaveBeenCalledWith({ amount: 1000 })
+    expect(depositCollateral).toHaveBeenCalledWith(1000)
   })
 
   it('a consumer withdraws collateral and sees the updated balance', () => {
     const { provider, withdrawCollateral } = fakeCollateralProvider()
     const layer = new LiquidLayer(provider)
 
-    layer.depositCollateral({ amount: 1000 })
-    const updatedBalance = layer.withdrawCollateral({ amount: 400 })
+    layer.depositCollateral(1000)
+    const updatedBalance = layer.withdrawCollateral(400)
 
     expect(updatedBalance).toBe(600)
     expect(withdrawCollateral).toHaveBeenCalledTimes(1)
-    expect(withdrawCollateral).toHaveBeenCalledWith({ amount: 400 })
+    expect(withdrawCollateral).toHaveBeenCalledWith(400)
   })
 
   it('rejects opening a position when collateral is below the required initial margin', () => {
     const { provider } = fakeCollateralProvider(500)
     const layer = new LiquidLayer(provider)
 
-    expect(() =>
-      layer.openPosition({ side: Side.Long, size: 1, entryPrice: 60000 }),
-    ).toThrow('insufficient margin')
+    expect(() => layer.openPosition(Side.Long, 1, 60000)).toThrow(
+      'insufficient margin',
+    )
     expect(provider.openPosition).not.toHaveBeenCalled()
   })
 
@@ -142,5 +128,29 @@ describe('LiquidLayer', () => {
 
     expect(balance).toBe(1000)
     expect(getCollateralBalance).toHaveBeenCalledTimes(1)
+  })
+
+  it('settles the realized PnL into the collateral balance when a position is closed', () => {
+    const closePosition = vi.fn(
+      (id: string, exitPrice: number): Position =>
+        aPosition()
+          .id(id)
+          .long()
+          .size(1)
+          .entryPrice(60000)
+          .exitPrice(exitPrice)
+          .build(),
+    )
+    const { provider, settlePnl } = fakeCollateralProvider(5000, {
+      closePosition,
+    })
+    const layer = new LiquidLayer(provider)
+
+    const result = layer.closePosition('pos-1', 61000)
+
+    expect(result.realizedPnl).toBe(1000)
+    expect(layer.getCollateralBalance()).toBe(6000)
+    expect(settlePnl).toHaveBeenCalledTimes(1)
+    expect(settlePnl).toHaveBeenCalledWith(1000)
   })
 })
