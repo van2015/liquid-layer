@@ -28,6 +28,11 @@ export async function postGraphQL<T>(
   if (!response.ok) {
     return { success: false, error: graphQLFailure() }
   }
-  const body: unknown = await response.json()
+  let body: unknown
+  try {
+    body = await response.json()
+  } catch {
+    return { success: false, error: graphQLFailure() }
+  }
   return { success: true, value: (body as { data: T }).data }
 }
