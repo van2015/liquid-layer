@@ -640,4 +640,29 @@ describe('LiquidLayer', async () => {
       value: 1000,
     })
   })
+
+  it('propagates an upstream failure when a settled PnL cannot be applied', async () => {
+    const settlePnl = vi.fn(async () => ({
+      success: false as const,
+      error: { type: 'UpstreamFailure' as const, operation: 'settlePnl' },
+    }))
+    const { provider } = fakeCollateralProvider(5000, {
+      settlePnl,
+      getPosition: vi.fn(async () => ({
+        success: true as const,
+        value: aPosition().id('pos-1').long().size(1).entryPrice(60000).build(),
+      })),
+      closePosition: vi.fn(
+        async (id: string, exitPrice: number): Promise<Position> =>
+          aPosition().id(id).long().size(1).entryPrice(60000).exitPrice(exitPrice).build(),
+      ),
+    })
+    const layer = new LiquidLayer(provider)
+
+    expect(await layer.closePosition('pos-1', 61000)).toEqual({
+      success: false,
+      error: { type: 'UpstreamFailure', operation: 'settlePnl' },
+    })
+    expect(settlePnl).toHaveBeenCalledTimes(1)
+  })
 })

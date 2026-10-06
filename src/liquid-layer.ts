@@ -83,8 +83,8 @@ export interface LiquidityProvider {
       InsufficientBalance | InvalidAmount | UpstreamFailure
     >
   >
-  settlePnl(amount: number): Promise<number>
-  settleFunding(amount: number): Promise<number>
+  settlePnl(amount: number): Promise<Result<void, UpstreamFailure>>
+  settleFunding(amount: number): Promise<Result<void, UpstreamFailure>>
   getCollateralBalance(): Promise<Result<Money, UpstreamFailure>>
   getRequiredMargin(
     side: Side,
@@ -194,17 +194,20 @@ export class LiquidLayer {
         available: balance.value,
       })
     }
-    return {
-      success: true,
-      value: await this.closeAndSettle(current, id, exitPrice),
+    const settled = await this.closeAndSettle(current, id, exitPrice)
+    if (!settled.success) {
+      return settled
     }
+    return settled
   }
 
   private async closeAndSettle(
     current: Position,
     id: string,
     exitPrice: number,
-  ): Promise<{ realizedPnl: number; position: Position }> {
+  ): Promise<
+    Result<{ realizedPnl: number; position: Position }, UpstreamFailure>
+  > {
     const position = await this.provider.closePosition(id, exitPrice)
     const realizedPnl = pnl(
       position.side,
@@ -212,8 +215,11 @@ export class LiquidLayer {
       exitPrice,
       position.size,
     )
-    await this.provider.settlePnl(realizedPnl)
-    return { realizedPnl, position }
+    const settled = await this.provider.settlePnl(realizedPnl)
+    if (!settled.success) {
+      return settled
+    }
+    return { success: true, value: { realizedPnl, position } }
   }
 
   private async ensureOpen(
@@ -371,10 +377,17 @@ export class LiquidLayer {
     if (equity.value >= maintenance.value) {
       return { success: true, value: { liquidated: false } }
     }
-    const { realizedPnl } = await this.closeAndSettle(position, id, markPrice)
+    const settled = await this.closeAndSettle(position, id, markPrice)
+    if (!settled.success) {
+      return settled
+    }
     return {
       success: true,
-      value: { liquidated: true, exitPrice: markPrice, realizedPnl },
+      value: {
+        liquidated: true,
+        exitPrice: markPrice,
+        realizedPnl: settled.value.realizedPnl,
+      },
     }
   }
 
@@ -393,7 +406,12 @@ export class LiquidLayer {
     }
     const { size, entryPrice, side } = open.value
     const amount = size * entryPrice * rate.value
-    await this.provider.settleFunding(side === Side.Long ? -amount : amount)
+    const settled = await this.provider.settleFunding(
+      side === Side.Long ? -amount : amount,
+    )
+    if (!settled.success) {
+      return settled
+    }
     return { success: true, value: undefined }
   }
 }

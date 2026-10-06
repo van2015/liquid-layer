@@ -15,8 +15,14 @@ export function fakeProvider(
     closePosition: vi.fn(),
     depositCollateral: vi.fn(),
     withdrawCollateral: vi.fn(),
-    settlePnl: vi.fn(),
-    settleFunding: vi.fn(),
+    settlePnl: vi.fn(async () => ({
+      success: true as const,
+      value: undefined,
+    })),
+    settleFunding: vi.fn(async () => ({
+      success: true as const,
+      value: undefined,
+    })),
     getCollateralBalance: vi.fn(async () => ({
       success: true as const,
       value: 10000,

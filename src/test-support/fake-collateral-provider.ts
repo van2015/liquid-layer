@@ -34,15 +34,19 @@ export function fakeCollateralProvider(
     },
   )
 
-  const settlePnl = vi.fn(async (amount: number): Promise<number> => {
-    balance += amount
-    return balance
-  })
+  const settlePnl = vi.fn(
+    async (amount: number): Promise<Result<void, UpstreamFailure>> => {
+      balance += amount
+      return { success: true, value: undefined }
+    },
+  )
 
-  const settleFunding = vi.fn(async (amount: number): Promise<number> => {
-    balance += amount
-    return balance
-  })
+  const settleFunding = vi.fn(
+    async (amount: number): Promise<Result<void, UpstreamFailure>> => {
+      balance += amount
+      return { success: true, value: undefined }
+    },
+  )
 
   const getCollateralBalance = vi.fn(
     async (): Promise<Result<number, UpstreamFailure>> => ({
