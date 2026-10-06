@@ -287,6 +287,31 @@ describe('LiquidLayer', () => {
     expect(listPositions).toHaveBeenCalledWith()
   })
 
+  it('computes the equity of a long position at the current mark price', () => {
+    const { provider, settlePnl, settleFunding } = fakeCollateralProvider(
+      6000,
+      {
+        getPosition: vi.fn(() => ({
+          success: true as const,
+          value: aPosition()
+            .id('pos-1')
+            .long()
+            .size(1)
+            .entryPrice(60000)
+            .build(),
+        })),
+      },
+    )
+    const layer = new LiquidLayer(provider)
+
+    expect(layer.getEquity('pos-1', 55000)).toEqual({
+      success: true,
+      value: 1000,
+    })
+    expect(settlePnl).not.toHaveBeenCalled()
+    expect(settleFunding).not.toHaveBeenCalled()
+  })
+
   it('charges funding on a long position and reduces the collateral balance', () => {
     const getPosition = vi.fn(
       (id: string): Result<Position, PositionNotFound> => ({

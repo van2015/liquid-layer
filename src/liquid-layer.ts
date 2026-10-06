@@ -163,6 +163,20 @@ export class LiquidLayer {
     return this.provider.listPositions()
   }
 
+  getEquity(id: string, markPrice: number): Result<number, PositionNotFound> {
+    const found = this.provider.getPosition(id)
+    if (!found.success) {
+      return found
+    }
+    const { side, size, entryPrice } = found.value
+    const direction = side === Side.Long ? 1 : -1
+    const unrealizedPnl = (markPrice - entryPrice) * size * direction
+    return {
+      success: true,
+      value: this.provider.getCollateralBalance() + unrealizedPnl,
+    }
+  }
+
   payFunding(id: string): Result<void, PositionNotFound> {
     const found = this.provider.getPosition(id)
     if (!found.success) {
