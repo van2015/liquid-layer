@@ -32,24 +32,30 @@ export const reserveNotFoundFixture = {
   },
 } as const
 
-export const reserveWithUserFixture = {
+export const userPositionsWithSupplyFixture = {
   data: {
-    reserve: {
-      userState: {
-        balance: {
-          amount: {
-            value: '1.465109424750435891',
-          },
+    borrows: [],
+    supplies: [
+      {
+        currency: {
+          address: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
+          symbol: 'WETH',
+          decimals: 18,
         },
+        balance: {
+          amount: { value: '0.000074432272270623' },
+          usd: '0.20225261152966136412744675',
+          usdPerToken: '2717.27041725',
+        },
+        isCollateral: true,
       },
-    },
+    ],
   },
 } as const
 
-export const reserveNoPositionFixture = {
+export const userNoPositionFixture = {
   data: {
-    reserve: {
-      userState: null,
-    },
+    borrows: [],
+    supplies: [],
   },
 } as const

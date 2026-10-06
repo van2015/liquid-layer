@@ -28,22 +28,28 @@ type ReserveData = {
   borrowInfo: { apy: { value: string } } | null
 }
 
-const RESERVE_USER_QUERY = `query ReserveWithUser($market: EvmAddress!, $underlyingToken: EvmAddress!, $chainId: ChainId!, $user: EvmAddress!) {
-  reserve(request: {market: $market, underlyingToken: $underlyingToken, chainId: $chainId, user: $user}) {
-    userState {
-      balance {
-        amount { value }
-      }
-    }
+const USER_POSITIONS_QUERY = `query UserPositions($market: MarketInput!, $user: EvmAddress!) {
+  borrows: userBorrows(request: {markets: [$market], user: $user, orderBy: {debt: DESC}}) {
+    currency { address symbol decimals }
+    debt { amount { value } usd }
+  }
+  supplies: userSupplies(request: {markets: [$market], user: $user, collateralsOnly: false, orderBy: {name: ASC}}) {
+    currency { address symbol decimals }
+    balance { amount { value } usd usdPerToken }
+    isCollateral
   }
 }`
 
-interface ReserveUserResponse {
-  reserve: {
-    userState: {
-      balance: { amount: { value: string } }
-    } | null
-  } | null
+interface UserPositionsResponse {
+  borrows: Array<{
+    currency: { address: string }
+    debt: { amount: { value: string } }
+  }>
+  supplies: Array<{
+    currency: { address: string }
+    balance: { amount: { value: string }; usdPerToken: string }
+    isCollateral: boolean
+  }>
 }
 
 function upstreamFailure(): UpstreamFailure {
@@ -130,31 +136,43 @@ export class AaveProvider {
   }
 
   async getCollateralBalance(): Promise<Result<number, UpstreamFailure>> {
-    const response = await postGraphQL<ReserveUserResponse>(
+    const positions = await this.positions()
+    if (!positions.success) {
+      return positions
+    }
+    const supply = positions.value.supplies.find(
+      (entry) =>
+        entry.currency.address.toLowerCase() ===
+          this.config.underlyingToken.toLowerCase() && entry.isCollateral,
+    )
+    if (supply === undefined) {
+      return { success: true, value: 0 }
+    }
+    return { success: true, value: parseFloat(supply.balance.amount.value) }
+  }
+
+  private async positions(): Promise<Result<UserPositionsResponse, UpstreamFailure>> {
+    const response = await postGraphQL<UserPositionsResponse>(
       this.config.fetchFn,
       GRAPHQL_URL,
-      RESERVE_USER_QUERY,
+      USER_POSITIONS_QUERY,
       {
-        market: this.config.market,
-        underlyingToken: this.config.underlyingToken,
-        chainId: this.config.chainId,
+        market: {
+          address: this.config.market,
+          chainId: this.config.chainId,
+        },
         user: this.config.user,
       },
     )
     if (!response.success) {
       return response
     }
-    const reserve = response.value.reserve
-    if (reserve === null) {
+    if (!Array.isArray(response.value.supplies)) {
       return {
         success: false,
         error: upstreamFailure(),
       }
     }
-    const userState = reserve.userState
-    if (userState === null) {
-      return { success: true, value: 0 }
-    }
-    return { success: true, value: parseFloat(userState.balance.amount.value) }
+    return response
   }
 }

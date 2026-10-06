@@ -4,8 +4,8 @@ import {
   reserveWethFixture,
   reserveBorrowDisabledFixture,
   reserveNotFoundFixture,
-  reserveWithUserFixture,
-  reserveNoPositionFixture,
+  userPositionsWithSupplyFixture,
+  userNoPositionFixture,
 } from '../../test-support/aave-fixtures'
 import { AaveProvider } from './aave-provider'
 import { GRAPHQL_URL } from './types'
@@ -172,13 +172,15 @@ describe('AaveProvider', () => {
     })
   })
 
-  it('reads the collateral balance from the reserve user state', async () => {
+  it('reads the collateral balance from the user supplies of the reserve', async () => {
     const fetchFn = vi.fn(
       async (
         _input: string | URL | Request,
         _init?: RequestInit,
       ): Promise<Response> =>
-        new Response(JSON.stringify(reserveWithUserFixture), { status: 200 }),
+        new Response(JSON.stringify(userPositionsWithSupplyFixture), {
+          status: 200,
+        }),
     )
     const provider = new AaveProvider({
       fetchFn,
@@ -192,21 +194,25 @@ describe('AaveProvider', () => {
 
     expect(result.success).toBe(true)
     if (result.success) {
-      expect(result.value).toBeCloseTo(1.465109424750435891, 9)
+      expect(result.value).toBeCloseTo(0.000074432272270623, 15)
     }
     const [, init] = fetchFn.mock.calls[0]!
     const body = JSON.parse(String(init?.body)) as {
       query: string
-      variables: Record<string, string>
+      variables: Record<string, unknown>
     }
-    expect(body.query).toContain('userState')
-    expect(body.variables.user).toBe(USER)
+    expect(body.query).toContain('userSupplies')
+    expect(body.query).toContain('borrows:')
+    expect(body.variables).toEqual({
+      market: { address: MARKET, chainId: '1' },
+      user: USER,
+    })
   })
 
   it('returns zero collateral when the user has no position on the reserve', async () => {
     const fetchFn = vi.fn(
       async (): Promise<Response> =>
-        new Response(JSON.stringify(reserveNoPositionFixture), { status: 200 }),
+        new Response(JSON.stringify(userNoPositionFixture), { status: 200 }),
     )
     const provider = new AaveProvider({
       fetchFn,
@@ -221,7 +227,7 @@ describe('AaveProvider', () => {
     expect(result).toEqual({ success: true, value: 0 })
   })
 
-  it('returns an upstream failure when the user reserve cannot be found', async () => {
+  it('returns an upstream failure when the positions payload has no data', async () => {
     const fetchFn = vi.fn(
       async (): Promise<Response> =>
         new Response(JSON.stringify(reserveNotFoundFixture), { status: 200 }),
