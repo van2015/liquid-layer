@@ -134,6 +134,17 @@ describe('LiquidLayer', () => {
     expect(withdrawCollateral).not.toHaveBeenCalled()
   })
 
+  it('rejects withdrawing a negative amount', () => {
+    const { provider, withdrawCollateral } = fakeCollateralProvider(500)
+    const layer = new LiquidLayer(provider)
+
+    expect(layer.withdrawCollateral(-100)).toEqual({
+      success: false,
+      error: { type: 'InvalidAmount', amount: -100 },
+    })
+    expect(withdrawCollateral).not.toHaveBeenCalled()
+  })
+
   it('rejects opening a position when collateral is below the required initial margin', () => {
     const { provider } = fakeCollateralProvider(500)
     const layer = new LiquidLayer(provider)

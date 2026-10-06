@@ -26,6 +26,11 @@ export type InsufficientBalance = {
   readonly available: Money
 }
 
+export type InvalidAmount = {
+  readonly type: 'InvalidAmount'
+  readonly amount: Money
+}
+
 export type Result<T, E extends DomainError> =
   | { success: true; value: T }
   | { success: false; error: E }
@@ -101,7 +106,15 @@ export class LiquidLayer {
     return this.provider.depositCollateral(amount)
   }
 
-  withdrawCollateral(amount: number): Result<number, InsufficientBalance> {
+  withdrawCollateral(
+    amount: number,
+  ): Result<number, InsufficientBalance | InvalidAmount> {
+    if (amount < 0) {
+      return {
+        success: false,
+        error: { type: 'InvalidAmount', amount },
+      }
+    }
     const balance = this.provider.getCollateralBalance()
     if (amount > balance) {
       return {
