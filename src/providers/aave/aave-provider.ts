@@ -46,6 +46,10 @@ interface ReserveUserResponse {
   } | null
 }
 
+function upstreamFailure(): UpstreamFailure {
+  return { type: 'UpstreamFailure', operation: 'postGraphQL' }
+}
+
 export interface AaveProviderConfig {
   fetchFn: FetchLike
   market: string
@@ -74,7 +78,7 @@ export class AaveProvider {
     if (response.value.reserve === null) {
       return {
         success: false,
-        error: { type: 'UpstreamFailure', operation: 'postGraphQL' },
+        error: upstreamFailure(),
       }
     }
     return { success: true, value: response.value.reserve }
@@ -119,7 +123,7 @@ export class AaveProvider {
     if (borrowInfo === null) {
       return {
         success: false,
-        error: { type: 'UpstreamFailure', operation: 'postGraphQL' },
+        error: upstreamFailure(),
       }
     }
     return { success: true, value: parseFloat(borrowInfo.apy.value) }
@@ -144,7 +148,7 @@ export class AaveProvider {
     if (reserve === null) {
       return {
         success: false,
-        error: { type: 'UpstreamFailure', operation: 'postGraphQL' },
+        error: upstreamFailure(),
       }
     }
     const userState = reserve.userState
