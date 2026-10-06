@@ -13,28 +13,31 @@ export function fakeCollateralProvider(
 ) {
   let balance = initialBalance
 
-  const depositCollateral = vi.fn((amount: number): number => {
+  const depositCollateral = vi.fn(async (amount: number): Promise<number> => {
     balance += amount
     return balance
   })
 
-  const withdrawCollateral = vi.fn((amount: number): number => {
+  const withdrawCollateral = vi.fn(async (amount: number): Promise<number> => {
     balance -= amount
     return balance
   })
 
-  const settlePnl = vi.fn((amount: number): number => {
+  const settlePnl = vi.fn(async (amount: number): Promise<number> => {
     balance += amount
     return balance
   })
 
-  const settleFunding = vi.fn((amount: number): number => {
+  const settleFunding = vi.fn(async (amount: number): Promise<number> => {
     balance += amount
     return balance
   })
 
   const getCollateralBalance = vi.fn(
-    (): Result<number, UpstreamFailure> => ({ success: true, value: balance }),
+    async (): Promise<Result<number, UpstreamFailure>> => ({
+      success: true,
+      value: balance,
+    }),
   )
 
   const provider: LiquidityProvider = fakeProvider({
@@ -43,11 +46,11 @@ export function fakeCollateralProvider(
     getCollateralBalance,
     settlePnl,
     settleFunding,
-    getRequiredMargin: (_side: Side, size: number, entryPrice: number) => ({
+    getRequiredMargin: async (_side: Side, size: number, entryPrice: number) => ({
       success: true as const,
       value: size * entryPrice * 0.1,
     }),
-    getMaintenanceMargin: (_side: Side, size: number, entryPrice: number) => ({
+    getMaintenanceMargin: async (_side: Side, size: number, entryPrice: number) => ({
       success: true as const,
       value: size * entryPrice * 0.05,
     }),

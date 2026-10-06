@@ -17,19 +17,26 @@ export function fakeProvider(
     withdrawCollateral: vi.fn(),
     settlePnl: vi.fn(),
     settleFunding: vi.fn(),
-    getCollateralBalance: vi.fn(() => ({ success: true as const, value: 10000 })),
-    getRequiredMargin: vi.fn(() => ({ success: true as const, value: 0 })),
-    getMaintenanceMargin: vi.fn(() => ({ success: true as const, value: 0 })),
-    getFundingRate: vi.fn(() => ({ success: true as const, value: 0 })),
-    getPosition: vi.fn((id: string) => ({
+    getCollateralBalance: vi.fn(async () => ({
+      success: true as const,
+      value: 10000,
+    })),
+    getRequiredMargin: vi.fn(async () => ({
+      success: true as const,
+      value: 0,
+    })),
+    getMaintenanceMargin: vi.fn(async () => ({
+      success: true as const,
+      value: 0,
+    })),
+    getFundingRate: vi.fn(async () => ({ success: true as const, value: 0 })),
+    getPosition: vi.fn(async (id: string) => ({
       success: true as const,
       value: { id, side: Side.Long, size: 1, entryPrice: 0 },
     })),
     listPositions: vi.fn(
-      (): Result<Position[], UpstreamFailure> => ({
-        success: true,
-        value: [],
-      }),
+      (): Promise<Result<Position[], UpstreamFailure>> =>
+        Promise.resolve({ success: true, value: [] }),
     ),
     ...overrides,
   }

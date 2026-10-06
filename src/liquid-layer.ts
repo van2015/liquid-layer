@@ -64,28 +64,28 @@ export interface Position {
 }
 
 export interface LiquidityProvider {
-  openPosition(side: Side, size: number, entryPrice: number): Position
-  closePosition(id: string, exitPrice: number): Position
-  depositCollateral(amount: number): number
-  withdrawCollateral(amount: number): number
-  settlePnl(amount: number): number
-  settleFunding(amount: number): number
-  getCollateralBalance(): Result<Money, UpstreamFailure>
+  openPosition(side: Side, size: number, entryPrice: number): Promise<Position>
+  closePosition(id: string, exitPrice: number): Promise<Position>
+  depositCollateral(amount: number): Promise<number>
+  withdrawCollateral(amount: number): Promise<number>
+  settlePnl(amount: number): Promise<number>
+  settleFunding(amount: number): Promise<number>
+  getCollateralBalance(): Promise<Result<Money, UpstreamFailure>>
   getRequiredMargin(
     side: Side,
     size: number,
     entryPrice: number,
-  ): Result<Money, UpstreamFailure>
+  ): Promise<Result<Money, UpstreamFailure>>
   getMaintenanceMargin(
     side: Side,
     size: number,
     entryPrice: number,
-  ): Result<Money, UpstreamFailure>
-  getFundingRate(): Result<number, UpstreamFailure>
+  ): Promise<Result<Money, UpstreamFailure>>
+  getFundingRate(): Promise<Result<number, UpstreamFailure>>
   getPosition(
     id: string,
-  ): Result<Position, PositionNotFound | UpstreamFailure>
-  listPositions(): Result<Position[], UpstreamFailure>
+  ): Promise<Result<Position, PositionNotFound | UpstreamFailure>>
+  listPositions(): Promise<Result<Position[], UpstreamFailure>>
 }
 
 const fail = <E extends DomainError>(error: E): Result<never, E> => ({
@@ -103,13 +103,15 @@ const pnl = (
 export class LiquidLayer {
   constructor(private readonly provider: LiquidityProvider) {}
 
-  openPosition(
+  async openPosition(
     side: Side,
     size: number,
     entryPrice: number,
-  ): Result<
-    Position,
-    InsufficientMargin | InvalidSize | InvalidPrice | UpstreamFailure
+  ): Promise<
+    Result<
+      Position,
+      InsufficientMargin | InvalidSize | InvalidPrice | UpstreamFailure
+    >
   > {
     if (size <= 0) {
       return fail({ type: 'InvalidSize', size })
@@ -117,7 +119,7 @@ export class LiquidLayer {
     if (entryPrice <= 0) {
       return fail({ type: 'InvalidPrice', price: entryPrice })
     }
-    const requiredMargin = this.provider.getRequiredMargin(
+    const requiredMargin = await this.provider.getRequiredMargin(
       side,
       size,
       entryPrice,
@@ -125,7 +127,7 @@ export class LiquidLayer {
     if (!requiredMargin.success) {
       return requiredMargin
     }
-    const balance = this.provider.getCollateralBalance()
+    const balance = await this.provider.getCollateralBalance()
     if (!balance.success) {
       return balance
     }
@@ -138,22 +140,24 @@ export class LiquidLayer {
     }
     return {
       success: true,
-      value: this.provider.openPosition(side, size, entryPrice),
+      value: await this.provider.openPosition(side, size, entryPrice),
     }
   }
 
-  closePosition(
+  async closePosition(
     id: string,
     exitPrice: number,
-  ): Result<
-    { realizedPnl: number; position: Position },
-    | PositionNotFound
-    | InvalidPrice
-    | PositionAlreadyClosed
-    | InsufficientBalance
-    | UpstreamFailure
+  ): Promise<
+    Result<
+      { realizedPnl: number; position: Position },
+      | PositionNotFound
+      | InvalidPrice
+      | PositionAlreadyClosed
+      | InsufficientBalance
+      | UpstreamFailure
+    >
   > {
-    const open = this.ensurePricedOpen(id, exitPrice)
+    const open = await this.ensurePricedOpen(id, exitPrice)
     if (!open.success) {
       return open
     }
@@ -164,7 +168,7 @@ export class LiquidLayer {
       exitPrice,
       current.size,
     )
-    const balance = this.provider.getCollateralBalance()
+    const balance = await this.provider.getCollateralBalance()
     if (!balance.success) {
       return balance
     }
@@ -175,32 +179,37 @@ export class LiquidLayer {
         available: balance.value,
       })
     }
-    return { success: true, value: this.closeAndSettle(current, id, exitPrice) }
+    return {
+      success: true,
+      value: await this.closeAndSettle(current, id, exitPrice),
+    }
   }
 
-  private closeAndSettle(
+  private async closeAndSettle(
     current: Position,
     id: string,
     exitPrice: number,
-  ): { realizedPnl: number; position: Position } {
-    const position = this.provider.closePosition(id, exitPrice)
+  ): Promise<{ realizedPnl: number; position: Position }> {
+    const position = await this.provider.closePosition(id, exitPrice)
     const realizedPnl = pnl(
       position.side,
       position.entryPrice,
       exitPrice,
       position.size,
     )
-    this.provider.settlePnl(realizedPnl)
+    await this.provider.settlePnl(realizedPnl)
     return { realizedPnl, position }
   }
 
-  private ensureOpen(
+  private async ensureOpen(
     id: string,
-  ): Result<
-    Position,
-    PositionNotFound | PositionAlreadyClosed | UpstreamFailure
+  ): Promise<
+    Result<
+      Position,
+      PositionNotFound | PositionAlreadyClosed | UpstreamFailure
+    >
   > {
-    const found = this.provider.getPosition(id)
+    const found = await this.provider.getPosition(id)
     if (!found.success) {
       return found
     }
@@ -210,12 +219,14 @@ export class LiquidLayer {
     return { success: true, value: found.value }
   }
 
-  private ensurePricedOpen(
+  private async ensurePricedOpen(
     id: string,
     price: number,
-  ): Result<
-    Position,
-    InvalidPrice | PositionNotFound | PositionAlreadyClosed | UpstreamFailure
+  ): Promise<
+    Result<
+      Position,
+      InvalidPrice | PositionNotFound | PositionAlreadyClosed | UpstreamFailure
+    >
   > {
     if (price <= 0) {
       return fail({ type: 'InvalidPrice', price })
@@ -223,20 +234,25 @@ export class LiquidLayer {
     return this.ensureOpen(id)
   }
 
-  depositCollateral(amount: number): Result<number, InvalidAmount> {
+  async depositCollateral(amount: number): Promise<Result<number, InvalidAmount>> {
     if (amount < 0) {
       return fail({ type: 'InvalidAmount', amount })
     }
-    return { success: true, value: this.provider.depositCollateral(amount) }
+    return {
+      success: true,
+      value: await this.provider.depositCollateral(amount),
+    }
   }
 
-  withdrawCollateral(
+  async withdrawCollateral(
     amount: number,
-  ): Result<number, InsufficientBalance | InvalidAmount | UpstreamFailure> {
+  ): Promise<
+    Result<number, InsufficientBalance | InvalidAmount | UpstreamFailure>
+  > {
     if (amount < 0) {
       return fail({ type: 'InvalidAmount', amount })
     }
-    const balance = this.provider.getCollateralBalance()
+    const balance = await this.provider.getCollateralBalance()
     if (!balance.success) {
       return balance
     }
@@ -247,53 +263,60 @@ export class LiquidLayer {
         available: balance.value,
       })
     }
-    return { success: true, value: this.provider.withdrawCollateral(amount) }
+    return {
+      success: true,
+      value: await this.provider.withdrawCollateral(amount),
+    }
   }
 
-  getCollateralBalance(): Result<Money, UpstreamFailure> {
+  async getCollateralBalance(): Promise<Result<Money, UpstreamFailure>> {
     return this.provider.getCollateralBalance()
   }
 
-  getPosition(
+  async getPosition(
     id: string,
-  ): Result<Position, PositionNotFound | UpstreamFailure> {
+  ): Promise<Result<Position, PositionNotFound | UpstreamFailure>> {
     return this.provider.getPosition(id)
   }
 
-  listPositions(): Result<Position[], UpstreamFailure> {
-    const listed = this.provider.listPositions()
+  async listPositions(): Promise<Result<Position[], UpstreamFailure>> {
+    const listed = await this.provider.listPositions()
     if (!listed.success) {
       return listed
     }
     return {
       success: true,
-      value: listed.value.filter((position) => position.exitPrice === undefined),
+      value: listed.value.filter(
+        (position) => position.exitPrice === undefined,
+      ),
     }
   }
 
-  getEquity(
+  async getEquity(
     id: string,
     markPrice: number,
-  ): Result<
-    number,
-    InvalidPrice | PositionNotFound | PositionAlreadyClosed | UpstreamFailure
+  ): Promise<
+    Result<
+      number,
+      InvalidPrice | PositionNotFound | PositionAlreadyClosed | UpstreamFailure
+    >
   > {
-    const open = this.ensurePricedOpen(id, markPrice)
+    const open = await this.ensurePricedOpen(id, markPrice)
     if (!open.success) {
       return open
     }
-    const equity = this.equityOf(open.value, markPrice)
+    const equity = await this.equityOf(open.value, markPrice)
     if (!equity.success) {
       return equity
     }
     return equity
   }
 
-  private equityOf(
+  private async equityOf(
     position: Position,
     markPrice: number,
-  ): Result<number, UpstreamFailure> {
-    const balance = this.provider.getCollateralBalance()
+  ): Promise<Result<number, UpstreamFailure>> {
+    const balance = await this.provider.getCollateralBalance()
     if (!balance.success) {
       return balance
     }
@@ -305,19 +328,21 @@ export class LiquidLayer {
     }
   }
 
-  checkLiquidation(
+  async checkLiquidation(
     id: string,
     markPrice: number,
-  ): Result<
-    { liquidated: boolean; exitPrice?: number; realizedPnl?: number },
-    PositionNotFound | InvalidPrice | PositionAlreadyClosed | UpstreamFailure
+  ): Promise<
+    Result<
+      { liquidated: boolean; exitPrice?: number; realizedPnl?: number },
+      PositionNotFound | InvalidPrice | PositionAlreadyClosed | UpstreamFailure
+    >
   > {
-    const open = this.ensurePricedOpen(id, markPrice)
+    const open = await this.ensurePricedOpen(id, markPrice)
     if (!open.success) {
       return open
     }
     const position = open.value
-    const maintenance = this.provider.getMaintenanceMargin(
+    const maintenance = await this.provider.getMaintenanceMargin(
       position.side,
       position.size,
       position.entryPrice,
@@ -325,34 +350,36 @@ export class LiquidLayer {
     if (!maintenance.success) {
       return maintenance
     }
-    const equity = this.equityOf(position, markPrice)
+    const equity = await this.equityOf(position, markPrice)
     if (!equity.success) {
       return equity
     }
     if (equity.value >= maintenance.value) {
       return { success: true, value: { liquidated: false } }
     }
-    const { realizedPnl } = this.closeAndSettle(position, id, markPrice)
+    const { realizedPnl } = await this.closeAndSettle(position, id, markPrice)
     return {
       success: true,
       value: { liquidated: true, exitPrice: markPrice, realizedPnl },
     }
   }
 
-  payFunding(
+  async payFunding(
     id: string,
-  ): Result<void, PositionNotFound | PositionAlreadyClosed | UpstreamFailure> {
-    const open = this.ensureOpen(id)
+  ): Promise<
+    Result<void, PositionNotFound | PositionAlreadyClosed | UpstreamFailure>
+  > {
+    const open = await this.ensureOpen(id)
     if (!open.success) {
       return open
     }
-    const rate = this.provider.getFundingRate()
+    const rate = await this.provider.getFundingRate()
     if (!rate.success) {
       return rate
     }
     const { size, entryPrice, side } = open.value
     const amount = size * entryPrice * rate.value
-    this.provider.settleFunding(side === Side.Long ? -amount : amount)
+    await this.provider.settleFunding(side === Side.Long ? -amount : amount)
     return { success: true, value: undefined }
   }
 }
