@@ -457,7 +457,7 @@ describe('LiquidLayer', () => {
     )
     const { provider, settleFunding } = fakeCollateralProvider(5000, {
       getPosition,
-      getFundingRate: () => 0.0001,
+      getFundingRate: () => ({ success: true as const, value: 0.0001 }),
     })
     const layer = new LiquidLayer(provider)
 
@@ -478,7 +478,7 @@ describe('LiquidLayer', () => {
     )
     const { provider, settleFunding } = fakeCollateralProvider(5000, {
       getPosition,
-      getFundingRate: () => 0.0001,
+      getFundingRate: () => ({ success: true as const, value: 0.0001 }),
     })
     const layer = new LiquidLayer(provider)
 
@@ -562,5 +562,20 @@ describe('LiquidLayer', () => {
       error: { type: 'UpstreamFailure', operation: 'getRequiredMargin' },
     })
     expect(provider.openPosition).not.toHaveBeenCalled()
+  })
+
+  it('propagates an upstream failure when the funding rate cannot be read', () => {
+    const getFundingRate = vi.fn(() => ({
+      success: false as const,
+      error: { type: 'UpstreamFailure' as const, operation: 'getFundingRate' },
+    }))
+    const provider = fakeProvider({ getFundingRate })
+    const layer = new LiquidLayer(provider)
+
+    expect(layer.payFunding('pos-1')).toEqual({
+      success: false,
+      error: { type: 'UpstreamFailure', operation: 'getFundingRate' },
+    })
+    expect(provider.settleFunding).not.toHaveBeenCalled()
   })
 })

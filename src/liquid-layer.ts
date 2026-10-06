@@ -81,7 +81,7 @@ export interface LiquidityProvider {
     size: number,
     entryPrice: number,
   ): Result<Money, UpstreamFailure>
-  getFundingRate(): number
+  getFundingRate(): Result<number, UpstreamFailure>
   getPosition(id: string): Result<Position, PositionNotFound>
   listPositions(): Position[]
 }
@@ -329,13 +329,17 @@ export class LiquidLayer {
 
   payFunding(
     id: string,
-  ): Result<void, PositionNotFound | PositionAlreadyClosed> {
+  ): Result<void, PositionNotFound | PositionAlreadyClosed | UpstreamFailure> {
     const open = this.ensureOpen(id)
     if (!open.success) {
       return open
     }
+    const rate = this.provider.getFundingRate()
+    if (!rate.success) {
+      return rate
+    }
     const { size, entryPrice, side } = open.value
-    const amount = size * entryPrice * this.provider.getFundingRate()
+    const amount = size * entryPrice * rate.value
     this.provider.settleFunding(side === Side.Long ? -amount : amount)
     return { success: true, value: undefined }
   }
