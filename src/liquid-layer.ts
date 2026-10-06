@@ -231,15 +231,18 @@ export class LiquidLayer {
   getEquity(
     id: string,
     markPrice: number,
-  ): Result<number, InvalidPrice | PositionNotFound> {
+  ): Result<
+    number,
+    InvalidPrice | PositionNotFound | PositionAlreadyClosed
+  > {
     if (markPrice <= 0) {
       return fail({ type: 'InvalidPrice', price: markPrice })
     }
-    const found = this.provider.getPosition(id)
-    if (!found.success) {
-      return found
+    const open = this.ensureOpen(id)
+    if (!open.success) {
+      return open
     }
-    return { success: true, value: this.equityOf(found.value, markPrice) }
+    return { success: true, value: this.equityOf(open.value, markPrice) }
   }
 
   private equityOf(position: Position, markPrice: number): number {

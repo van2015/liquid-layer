@@ -412,6 +412,24 @@ describe('LiquidLayer', () => {
     expect(getPosition).not.toHaveBeenCalled()
   })
 
+  it('rejects computing equity for a position that was already closed', () => {
+    const { provider } = fakeCollateralProvider(6000, {
+      getPosition: vi.fn(() => ({
+        success: true as const,
+        value: {
+          ...aPosition().id('pos-1').long().size(1).entryPrice(60000).build(),
+          exitPrice: 55000,
+        },
+      })),
+    })
+    const layer = new LiquidLayer(provider)
+
+    expect(layer.getEquity('pos-1', 55000)).toEqual({
+      success: false,
+      error: { type: 'PositionAlreadyClosed', id: 'pos-1' },
+    })
+  })
+
   it('charges funding on a long position and reduces the collateral balance', () => {
     const getPosition = vi.fn(
       (id: string): Result<Position, PositionNotFound> => ({
