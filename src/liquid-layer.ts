@@ -73,6 +73,13 @@ const fail = <E extends DomainError>(error: E): Result<never, E> => ({
   error,
 })
 
+const pnl = (
+  side: Side,
+  entryPrice: number,
+  price: number,
+  size: number,
+): number => (price - entryPrice) * size * (side === Side.Long ? 1 : -1)
+
 export class LiquidLayer {
   constructor(private readonly provider: LiquidityProvider) {}
 
@@ -121,9 +128,12 @@ export class LiquidLayer {
       return found
     }
     const position = this.provider.closePosition(id, exitPrice)
-    const direction = position.side === Side.Long ? 1 : -1
-    const realizedPnl =
-      (exitPrice - position.entryPrice) * position.size * direction
+    const realizedPnl = pnl(
+      position.side,
+      position.entryPrice,
+      exitPrice,
+      position.size,
+    )
     this.provider.settlePnl(realizedPnl)
     return { success: true, value: { realizedPnl, position } }
   }
@@ -169,13 +179,14 @@ export class LiquidLayer {
     if (!found.success) {
       return found
     }
-    const { side, size, entryPrice } = found.value
-    const direction = side === Side.Long ? 1 : -1
-    const unrealizedPnl = (markPrice - entryPrice) * size * direction
-    return {
-      success: true,
-      value: this.provider.getCollateralBalance() + unrealizedPnl,
-    }
+    return { success: true, value: this.equityOf(found.value, markPrice) }
+  }
+
+  private equityOf(position: Position, markPrice: number): number {
+    return (
+      this.provider.getCollateralBalance() +
+      pnl(position.side, position.entryPrice, markPrice, position.size)
+    )
   }
 
   checkLiquidation(
@@ -185,10 +196,6 @@ export class LiquidLayer {
     { liquidated: boolean; exitPrice?: number; realizedPnl?: number },
     PositionNotFound | InvalidPrice
   > {
-    const equity = this.getEquity(id, markPrice)
-    if (!equity.success) {
-      return equity
-    }
     const found = this.provider.getPosition(id)
     if (!found.success) {
       return found
@@ -199,7 +206,7 @@ export class LiquidLayer {
       position.size,
       position.entryPrice,
     )
-    if (equity.value >= maintenance) {
+    if (this.equityOf(position, markPrice) >= maintenance) {
       return { success: true, value: { liquidated: false } }
     }
     const closed = this.closePosition(id, markPrice)
