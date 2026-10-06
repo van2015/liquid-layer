@@ -9,6 +9,14 @@ function graphQLFailure(): UpstreamFailure {
   return { type: 'UpstreamFailure', operation: 'postGraphQL' }
 }
 
+function hasGraphQLErrors(body: unknown): boolean {
+  if (typeof body !== 'object' || body === null) {
+    return false
+  }
+  const { errors } = body as { errors?: unknown }
+  return Array.isArray(errors) && errors.length > 0
+}
+
 export async function postGraphQL<T>(
   fetchFn: FetchLike,
   url: string,
@@ -34,12 +42,7 @@ export async function postGraphQL<T>(
   } catch {
     return { success: false, error: graphQLFailure() }
   }
-  if (
-    typeof body === 'object' &&
-    body !== null &&
-    Array.isArray((body as { errors?: unknown }).errors) &&
-    (body as { errors: unknown[] }).errors.length > 0
-  ) {
+  if (hasGraphQLErrors(body)) {
     return { success: false, error: graphQLFailure() }
   }
   return { success: true, value: (body as { data: T }).data }
