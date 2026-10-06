@@ -225,7 +225,9 @@ export class LiquidLayer {
   }
 
   listPositions(): Position[] {
-    return this.provider.listPositions()
+    return this.provider
+      .listPositions()
+      .filter((position) => position.exitPrice === undefined)
   }
 
   getEquity(

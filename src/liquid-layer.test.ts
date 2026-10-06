@@ -430,6 +430,24 @@ describe('LiquidLayer', () => {
     })
   })
 
+  it('lists only open positions, hiding already closed ones', () => {
+    const listPositions = vi.fn(
+      (): Position[] => [
+        aPosition().id('pos-1').long().size(1).entryPrice(60000).build(),
+        {
+          ...aPosition().id('pos-2').short().size(1).entryPrice(60000).build(),
+          exitPrice: 55000,
+        },
+      ],
+    )
+    const provider = fakeProvider({ listPositions })
+    const layer = new LiquidLayer(provider)
+
+    expect(layer.listPositions()).toEqual([
+      aPosition().id('pos-1').long().size(1).entryPrice(60000).build(),
+    ])
+  })
+
   it('charges funding on a long position and reduces the collateral balance', () => {
     const getPosition = vi.fn(
       (id: string): Result<Position, PositionNotFound> => ({
