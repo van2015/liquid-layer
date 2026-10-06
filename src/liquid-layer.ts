@@ -128,7 +128,7 @@ export class LiquidLayer {
     | PositionAlreadyClosed
     | InsufficientBalance
   > {
-    const open = this.ensureClosable(id, exitPrice)
+    const open = this.ensurePricedOpen(id, exitPrice)
     if (!open.success) {
       return open
     }
@@ -179,7 +179,7 @@ export class LiquidLayer {
     return { success: true, value: found.value }
   }
 
-  private ensureClosable(
+  private ensurePricedOpen(
     id: string,
     price: number,
   ): Result<
@@ -235,10 +235,7 @@ export class LiquidLayer {
     number,
     InvalidPrice | PositionNotFound | PositionAlreadyClosed
   > {
-    if (markPrice <= 0) {
-      return fail({ type: 'InvalidPrice', price: markPrice })
-    }
-    const open = this.ensureOpen(id)
+    const open = this.ensurePricedOpen(id, markPrice)
     if (!open.success) {
       return open
     }
@@ -259,7 +256,7 @@ export class LiquidLayer {
     { liquidated: boolean; exitPrice?: number; realizedPnl?: number },
     PositionNotFound | InvalidPrice | PositionAlreadyClosed
   > {
-    const open = this.ensureClosable(id, markPrice)
+    const open = this.ensurePricedOpen(id, markPrice)
     if (!open.success) {
       return open
     }
