@@ -128,17 +128,11 @@ export class LiquidLayer {
     | PositionAlreadyClosed
     | InsufficientBalance
   > {
-    if (exitPrice <= 0) {
-      return fail({ type: 'InvalidPrice', price: exitPrice })
+    const open = this.ensureClosable(id, exitPrice)
+    if (!open.success) {
+      return open
     }
-    const found = this.provider.getPosition(id)
-    if (!found.success) {
-      return found
-    }
-    const current = found.value
-    if (current.exitPrice !== undefined) {
-      return fail({ type: 'PositionAlreadyClosed', id })
-    }
+    const current = open.value
     const provisionalPnl = pnl(
       current.side,
       current.entryPrice,
@@ -170,6 +164,26 @@ export class LiquidLayer {
     )
     this.provider.settlePnl(realizedPnl)
     return { realizedPnl, position }
+  }
+
+  private ensureClosable(
+    id: string,
+    price: number,
+  ): Result<
+    Position,
+    InvalidPrice | PositionNotFound | PositionAlreadyClosed
+  > {
+    if (price <= 0) {
+      return fail({ type: 'InvalidPrice', price })
+    }
+    const found = this.provider.getPosition(id)
+    if (!found.success) {
+      return found
+    }
+    if (found.value.exitPrice !== undefined) {
+      return fail({ type: 'PositionAlreadyClosed', id })
+    }
+    return { success: true, value: found.value }
   }
 
   depositCollateral(amount: number): Result<number, InvalidAmount> {
@@ -230,17 +244,11 @@ export class LiquidLayer {
     { liquidated: boolean; exitPrice?: number; realizedPnl?: number },
     PositionNotFound | InvalidPrice | PositionAlreadyClosed
   > {
-    if (markPrice <= 0) {
-      return fail({ type: 'InvalidPrice', price: markPrice })
+    const open = this.ensureClosable(id, markPrice)
+    if (!open.success) {
+      return open
     }
-    const found = this.provider.getPosition(id)
-    if (!found.success) {
-      return found
-    }
-    const position = found.value
-    if (position.exitPrice !== undefined) {
-      return fail({ type: 'PositionAlreadyClosed', id })
-    }
+    const position = open.value
     const maintenance = this.provider.getMaintenanceMargin(
       position.side,
       position.size,
