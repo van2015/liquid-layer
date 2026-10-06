@@ -10,8 +10,10 @@ export function fakeProvider(
     depositCollateral: vi.fn(),
     withdrawCollateral: vi.fn(),
     settlePnl: vi.fn(),
+    settleFunding: vi.fn(),
     getCollateralBalance: vi.fn(() => 10000),
     getRequiredMargin: vi.fn(() => 0),
+    getFundingRate: vi.fn(() => 0),
     getPosition: vi.fn(),
     ...overrides,
   }

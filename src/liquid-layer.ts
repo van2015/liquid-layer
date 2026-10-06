@@ -17,8 +17,10 @@ export interface LiquidityProvider {
   depositCollateral(amount: number): number
   withdrawCollateral(amount: number): number
   settlePnl(amount: number): number
+  settleFunding(amount: number): number
   getCollateralBalance(): number
   getRequiredMargin(side: Side, size: number, entryPrice: number): number
+  getFundingRate(): number
   getPosition(id: string): Position
 }
 
@@ -63,5 +65,12 @@ export class LiquidLayer {
 
   getPosition(id: string): Position {
     return this.provider.getPosition(id)
+  }
+
+  payFunding(id: string): void {
+    const position = this.provider.getPosition(id)
+    const rate = this.provider.getFundingRate()
+    const amount = position.size * position.entryPrice * rate
+    this.provider.settleFunding(-amount)
   }
 }

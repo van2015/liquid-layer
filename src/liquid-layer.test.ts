@@ -170,4 +170,22 @@ describe('LiquidLayer', () => {
     expect(getPosition).toHaveBeenCalledTimes(1)
     expect(getPosition).toHaveBeenCalledWith('pos-1')
   })
+
+  it('charges funding on a long position and reduces the collateral balance', () => {
+    const getPosition = vi.fn(
+      (id: string): Position =>
+        aPosition().id(id).long().size(1).entryPrice(60000).build(),
+    )
+    const { provider, settleFunding } = fakeCollateralProvider(5000, {
+      getPosition,
+      getFundingRate: () => 0.0001,
+    })
+    const layer = new LiquidLayer(provider)
+
+    layer.payFunding('pos-1')
+
+    expect(settleFunding).toHaveBeenCalledTimes(1)
+    expect(settleFunding).toHaveBeenCalledWith(-6)
+    expect(layer.getCollateralBalance()).toBe(4994)
+  })
 })

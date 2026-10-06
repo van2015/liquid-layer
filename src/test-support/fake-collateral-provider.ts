@@ -23,6 +23,11 @@ export function fakeCollateralProvider(
     return balance
   })
 
+  const settleFunding = vi.fn((amount: number): number => {
+    balance += amount
+    return balance
+  })
+
   const getCollateralBalance = vi.fn((): number => balance)
 
   const provider: LiquidityProvider = fakeProvider({
@@ -30,6 +35,7 @@ export function fakeCollateralProvider(
     withdrawCollateral,
     getCollateralBalance,
     settlePnl,
+    settleFunding,
     getRequiredMargin: (_side: Side, size: number, entryPrice: number) =>
       size * entryPrice * 0.1,
     ...overrides,
@@ -40,6 +46,7 @@ export function fakeCollateralProvider(
     depositCollateral,
     withdrawCollateral,
     settlePnl,
+    settleFunding,
     getCollateralBalance,
   }
 }
