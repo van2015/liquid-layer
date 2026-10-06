@@ -5,6 +5,10 @@ export type FetchLike = (
   init?: RequestInit,
 ) => Promise<Response>
 
+function graphQLFailure(): UpstreamFailure {
+  return { type: 'UpstreamFailure', operation: 'postGraphQL' }
+}
+
 export async function postGraphQL<T>(
   fetchFn: FetchLike,
   url: string,
@@ -19,16 +23,10 @@ export async function postGraphQL<T>(
       body: JSON.stringify({ query, variables }),
     })
   } catch {
-    return {
-      success: false,
-      error: { type: 'UpstreamFailure', operation: 'postGraphQL' },
-    }
+    return { success: false, error: graphQLFailure() }
   }
   if (!response.ok) {
-    return {
-      success: false,
-      error: { type: 'UpstreamFailure', operation: 'postGraphQL' },
-    }
+    return { success: false, error: graphQLFailure() }
   }
   const body: unknown = await response.json()
   return { success: true, value: (body as { data: T }).data }
