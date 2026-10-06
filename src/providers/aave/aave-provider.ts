@@ -3,6 +3,7 @@ import {
   type Position,
   type PositionNotFound,
   type Result,
+  type Trade,
   type UpstreamFailure,
 } from '../../liquid-layer'
 import { postGraphQL, type FetchLike } from './graphql-client'
@@ -97,29 +98,31 @@ export class AaveProvider {
   }
 
   async getRequiredMargin(
-    side: Side,
-    size: number,
-    entryPrice: number,
+    trade: Trade,
   ): Promise<Result<number, UpstreamFailure>> {
     const reserve = await this.reserve()
     if (!reserve.success) {
       return reserve
     }
     const maxLTV = parseFloat(reserve.value.supplyInfo.maxLTV.value)
-    return { success: true, value: (size * entryPrice) / maxLTV }
+    return {
+      success: true,
+      value: (trade.size * trade.entryPrice) / maxLTV,
+    }
   }
 
   async getMaintenanceMargin(
-    side: Side,
-    size: number,
-    entryPrice: number,
+    trade: Trade,
   ): Promise<Result<number, UpstreamFailure>> {
     const reserve = await this.reserve()
     if (!reserve.success) {
       return reserve
     }
     const threshold = parseFloat(reserve.value.supplyInfo.liquidationThreshold.value)
-    return { success: true, value: (size * entryPrice) / threshold }
+    return {
+      success: true,
+      value: (trade.size * trade.entryPrice) / threshold,
+    }
   }
 
   async getFundingRate(

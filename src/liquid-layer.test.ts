@@ -27,7 +27,11 @@ describe('LiquidLayer', async () => {
 
     expect(result).toEqual({ success: true, value: preparedTx })
     expect(openPosition).toHaveBeenCalledTimes(1)
-    expect(openPosition).toHaveBeenCalledWith(Side.Long, 1, 60000)
+    expect(openPosition).toHaveBeenCalledWith({
+      side: Side.Long,
+      size: 1,
+      entryPrice: 60000,
+    })
   })
 
   it('a consumer closes a long position and the layer calculates the realized PnL', async () => {

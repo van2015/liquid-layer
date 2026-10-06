@@ -33,7 +33,11 @@ describe('AaveProvider', () => {
       user: USER,
     })
 
-    const result = await provider.getRequiredMargin(Side.Long, 2, 40250)
+    const result = await provider.getRequiredMargin({
+      side: Side.Long,
+      size: 2,
+      entryPrice: 40250,
+    })
 
     expect(result.success).toBe(true)
     if (result.success) {
@@ -70,7 +74,11 @@ describe('AaveProvider', () => {
       user: USER,
     })
 
-    const result = await provider.getMaintenanceMargin(Side.Long, 1, 83000)
+    const result = await provider.getMaintenanceMargin({
+      side: Side.Long,
+      size: 1,
+      entryPrice: 83000,
+    })
 
     expect(result.success).toBe(true)
     if (result.success) {
@@ -94,7 +102,11 @@ describe('AaveProvider', () => {
       user: USER,
     })
 
-    const result = await provider.getRequiredMargin(Side.Long, 1, 60000)
+    const result = await provider.getRequiredMargin({
+      side: Side.Long,
+      size: 1,
+      entryPrice: 60000,
+    })
 
     expect(result).toEqual({
       success: false,
@@ -166,7 +178,11 @@ describe('AaveProvider', () => {
       user: USER,
     })
 
-    const result = await provider.getRequiredMargin(Side.Long, 1, 60000)
+    const result = await provider.getRequiredMargin({
+      side: Side.Long,
+      size: 1,
+      entryPrice: 60000,
+    })
 
     expect(result).toEqual({
       success: false,

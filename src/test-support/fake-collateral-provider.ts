@@ -1,8 +1,8 @@
 import { vi } from 'vitest'
 import {
-  Side,
   type LiquidityProvider,
   type Result,
+  type Trade,
   type TransactionRequest,
   type UpstreamFailure,
 } from '../liquid-layer'
@@ -57,13 +57,13 @@ export function fakeCollateralProvider(
     getCollateralBalance,
     settlePnl,
     settleFunding,
-    getRequiredMargin: async (_side: Side, size: number, entryPrice: number) => ({
+    getRequiredMargin: async (trade: Trade) => ({
       success: true as const,
-      value: size * entryPrice * 0.1,
+      value: trade.size * trade.entryPrice * 0.1,
     }),
-    getMaintenanceMargin: async (_side: Side, size: number, entryPrice: number) => ({
+    getMaintenanceMargin: async (trade: Trade) => ({
       success: true as const,
-      value: size * entryPrice * 0.05,
+      value: trade.size * trade.entryPrice * 0.05,
     }),
     ...overrides,
   })

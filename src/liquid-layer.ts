@@ -69,11 +69,15 @@ export interface Position {
   exitPrice?: number
 }
 
+export interface Trade {
+  side: Side
+  size: number
+  entryPrice: number
+}
+
 export interface LiquidityProvider {
   openPosition(
-    side: Side,
-    size: number,
-    entryPrice: number,
+    trade: Trade,
   ): Promise<
     Result<
       TransactionRequest,
@@ -103,16 +107,8 @@ export interface LiquidityProvider {
   settlePnl(amount: number): Promise<Result<void, UpstreamFailure>>
   settleFunding(amount: number): Promise<Result<void, UpstreamFailure>>
   getCollateralBalance(): Promise<Result<Money, UpstreamFailure>>
-  getRequiredMargin(
-    side: Side,
-    size: number,
-    entryPrice: number,
-  ): Promise<Result<Money, UpstreamFailure>>
-  getMaintenanceMargin(
-    side: Side,
-    size: number,
-    entryPrice: number,
-  ): Promise<Result<Money, UpstreamFailure>>
+  getRequiredMargin(trade: Trade): Promise<Result<Money, UpstreamFailure>>
+  getMaintenanceMargin(trade: Trade): Promise<Result<Money, UpstreamFailure>>
   getFundingRate(): Promise<Result<number, UpstreamFailure>>
   getPosition(
     id: string,
@@ -151,11 +147,8 @@ export class LiquidLayer {
     if (entryPrice <= 0) {
       return fail({ type: 'InvalidPrice', price: entryPrice })
     }
-    const requiredMargin = await this.provider.getRequiredMargin(
-      side,
-      size,
-      entryPrice,
-    )
+    const trade = { side, size, entryPrice }
+    const requiredMargin = await this.provider.getRequiredMargin(trade)
     if (!requiredMargin.success) {
       return requiredMargin
     }
@@ -170,7 +163,7 @@ export class LiquidLayer {
         available: balance.value,
       })
     }
-    return this.provider.openPosition(side, size, entryPrice)
+    return this.provider.openPosition(trade)
   }
 
   async closePosition(
@@ -383,11 +376,11 @@ export class LiquidLayer {
       return open
     }
     const position = open.value
-    const maintenance = await this.provider.getMaintenanceMargin(
-      position.side,
-      position.size,
-      position.entryPrice,
-    )
+    const maintenance = await this.provider.getMaintenanceMargin({
+      side: position.side,
+      size: position.size,
+      entryPrice: position.entryPrice,
+    })
     if (!maintenance.success) {
       return maintenance
     }
