@@ -1,4 +1,10 @@
-import type { Result, Side, UpstreamFailure } from '../../liquid-layer'
+import {
+  Side,
+  type Position,
+  type PositionNotFound,
+  type Result,
+  type UpstreamFailure,
+} from '../../liquid-layer'
 import { postGraphQL, type FetchLike } from './graphql-client'
 import { GRAPHQL_URL } from './types'
 
@@ -43,7 +49,7 @@ const USER_POSITIONS_QUERY = `query UserPositions($market: MarketInput!, $user: 
 interface UserPositionsResponse {
   borrows: Array<{
     currency: { address: string }
-    debt: { amount: { value: string } }
+    debt: { amount: { value: string }; usd: string }
   }>
   supplies: Array<{
     currency: { address: string }
@@ -174,5 +180,37 @@ export class AaveProvider {
       }
     }
     return response
+  }
+
+  private positionId(): string {
+    return `${this.config.chainId}:${this.config.market}:${this.config.underlyingToken}`
+  }
+
+  async getPosition(
+    id: string,
+  ): Promise<Result<Position, PositionNotFound | UpstreamFailure>> {
+    const positions = await this.positions()
+    if (!positions.success) {
+      return positions
+    }
+    const borrow = positions.value.borrows.find(
+      (entry) =>
+        entry.currency.address.toLowerCase() ===
+        this.config.underlyingToken.toLowerCase(),
+    )
+    if (borrow !== undefined) {
+      const size = parseFloat(borrow.debt.amount.value)
+      return {
+        success: true,
+        value: {
+          id: this.positionId(),
+          side: Side.Long,
+          size,
+          entryPrice: parseFloat(borrow.debt.usd) / size,
+          exitPrice: undefined,
+        },
+      }
+    }
+    return { success: false, error: { type: 'PositionNotFound', id } }
   }
 }

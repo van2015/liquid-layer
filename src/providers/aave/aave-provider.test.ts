@@ -6,6 +6,7 @@ import {
   reserveNotFoundFixture,
   userPositionsWithSupplyFixture,
   userNoPositionFixture,
+  userPositionsWithWethDebtFixture,
 } from '../../test-support/aave-fixtures'
 import { AaveProvider } from './aave-provider'
 import { GRAPHQL_URL } from './types'
@@ -246,5 +247,36 @@ describe('AaveProvider', () => {
       success: false,
       error: { type: 'UpstreamFailure', operation: 'postGraphQL' },
     })
+  })
+
+  it('reads a long position from the user borrow of the reserve', async () => {
+    const fetchFn = vi.fn(
+      async (
+        _input: string | URL | Request,
+        _init?: RequestInit,
+      ): Promise<Response> =>
+        new Response(JSON.stringify(userPositionsWithWethDebtFixture), {
+          status: 200,
+        }),
+    )
+    const provider = new AaveProvider({
+      fetchFn,
+      market: MARKET,
+      underlyingToken: WETH,
+      chainId: '1',
+      user: '0x772439Ea39a64340DcD348618C15a483D0db4c18',
+    })
+    const positionId = `1:${MARKET}:${WETH}`
+
+    const result = await provider.getPosition(positionId)
+
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.value.id).toBe(positionId)
+      expect(result.value.side).toBe(Side.Long)
+      expect(result.value.size).toBeCloseTo(0.025294505537082373, 15)
+      expect(result.value.entryPrice).toBeCloseTo(2717.27, 1)
+      expect(result.value.exitPrice).toBeUndefined()
+    }
   })
 })

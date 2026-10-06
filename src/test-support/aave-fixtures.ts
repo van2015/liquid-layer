@@ -59,3 +59,36 @@ export const userNoPositionFixture = {
     supplies: [],
   },
 } as const
+
+export const userPositionsWithWethDebtFixture = {
+  data: {
+    borrows: [
+      {
+        currency: {
+          address: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
+          symbol: 'WETH',
+          decimals: 18,
+        },
+        debt: {
+          amount: { value: '0.025294505537082373' },
+          usd: '68.73201161488025502933013425',
+        },
+      },
+    ],
+    supplies: [
+      {
+        currency: {
+          address: '0x7Fc66500c84A76Ad7e9c93437bFc5Ac33E2DDaE9',
+          symbol: 'AAVE',
+          decimals: 18,
+        },
+        balance: {
+          amount: { value: '0.800774491535946253' },
+          usd: '146.07088592712432378816662263',
+          usdPerToken: '182.41201171',
+        },
+        isCollateral: true,
+      },
+    ],
+  },
+} as const
