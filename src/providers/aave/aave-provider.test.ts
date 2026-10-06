@@ -335,4 +335,26 @@ describe('AaveProvider', () => {
     })
     expect(fetchFn).not.toHaveBeenCalled()
   })
+
+  it('returns position not found when the user has no position on the reserve', async () => {
+    const fetchFn = vi.fn(
+      async (): Promise<Response> =>
+        new Response(JSON.stringify(userNoPositionFixture), { status: 200 }),
+    )
+    const provider = new AaveProvider({
+      fetchFn,
+      market: MARKET,
+      underlyingToken: WETH,
+      chainId: '1',
+      user: USER,
+    })
+    const positionId = `1:${MARKET}:${WETH}`
+
+    const result = await provider.getPosition(positionId)
+
+    expect(result).toEqual({
+      success: false,
+      error: { type: 'PositionNotFound', id: positionId },
+    })
+  })
 })
