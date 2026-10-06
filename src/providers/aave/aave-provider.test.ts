@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { Side } from '../../liquid-layer'
-import { reserveWethFixture } from '../../test-support/aave-fixtures'
+import { reserveWethFixture, reserveBorrowDisabledFixture } from '../../test-support/aave-fixtures'
 import { AaveProvider } from './aave-provider'
 import { GRAPHQL_URL } from './types'
 
@@ -115,5 +115,27 @@ describe('AaveProvider', () => {
     const body = JSON.parse(String(init?.body)) as { query: string }
     expect(body.query).toContain('borrowInfo')
     expect(body.query).toContain('apy { value }')
+  })
+
+  it('returns an upstream failure when borrowing is disabled on the reserve', async () => {
+    const fetchFn = vi.fn(
+      async (): Promise<Response> =>
+        new Response(JSON.stringify(reserveBorrowDisabledFixture), {
+          status: 200,
+        }),
+    )
+    const provider = new AaveProvider({
+      fetchFn,
+      market: MARKET,
+      underlyingToken: WETH,
+      chainId: '1',
+    })
+
+    const result = await provider.getFundingRate(Side.Long, 1, 60000)
+
+    expect(result).toEqual({
+      success: false,
+      error: { type: 'UpstreamFailure', operation: 'postGraphQL' },
+    })
   })
 })

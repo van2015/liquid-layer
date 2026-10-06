@@ -12,3 +12,16 @@ export const reserveWethFixture = {
     },
   },
 } as const
+
+export const reserveBorrowDisabledFixture = {
+  data: {
+    reserve: {
+      supplyInfo: {
+        maxLTV: { value: '0.805' },
+        liquidationThreshold: { value: '0.83' },
+        apy: { value: '0.013475641458201418297577074' },
+      },
+      borrowInfo: null,
+    },
+  },
+} as const

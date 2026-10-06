@@ -86,9 +86,13 @@ export class AaveProvider {
     if (!reserve.success) {
       return reserve
     }
-    return {
-      success: true,
-      value: parseFloat(reserve.value.reserve!.borrowInfo!.apy.value),
+    const borrowInfo = reserve.value.reserve?.borrowInfo
+    if (borrowInfo === null || borrowInfo === undefined) {
+      return {
+        success: false,
+        error: { type: 'UpstreamFailure', operation: 'postGraphQL' },
+      }
     }
+    return { success: true, value: parseFloat(borrowInfo.apy.value) }
   }
 }
