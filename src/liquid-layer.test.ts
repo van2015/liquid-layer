@@ -207,7 +207,7 @@ describe('LiquidLayer', () => {
 
     const balance = layer.getCollateralBalance()
 
-    expect(balance).toBe(1000)
+    expect(balance).toEqual({ success: true, value: 1000 })
     expect(getCollateralBalance).toHaveBeenCalledTimes(1)
   })
 
@@ -242,7 +242,7 @@ describe('LiquidLayer', () => {
           .build(),
       },
     })
-    expect(layer.getCollateralBalance()).toBe(6000)
+    expect(layer.getCollateralBalance()).toEqual({ success: true, value: 6000 })
     expect(settlePnl).toHaveBeenCalledTimes(1)
     expect(settlePnl).toHaveBeenCalledWith(1000)
   })
@@ -338,7 +338,7 @@ describe('LiquidLayer', () => {
     })
     expect(closePosition).toHaveBeenCalledWith('pos-1', 55000)
     expect(settlePnl).toHaveBeenCalledWith(-5000)
-    expect(getCollateralBalance()).toBe(1000)
+    expect(getCollateralBalance()).toEqual({ success: true, value: 1000 })
   })
 
   it('rejects closing a position that was already closed', () => {
@@ -466,7 +466,7 @@ describe('LiquidLayer', () => {
     expect(result).toEqual({ success: true, value: undefined })
     expect(settleFunding).toHaveBeenCalledTimes(1)
     expect(settleFunding).toHaveBeenCalledWith(-6)
-    expect(layer.getCollateralBalance()).toBe(4994)
+    expect(layer.getCollateralBalance()).toEqual({ success: true, value: 4994 })
   })
 
   it('credits funding to a short position when the rate is positive', () => {
@@ -487,7 +487,7 @@ describe('LiquidLayer', () => {
     expect(result).toEqual({ success: true, value: undefined })
     expect(settleFunding).toHaveBeenCalledTimes(1)
     expect(settleFunding).toHaveBeenCalledWith(6)
-    expect(layer.getCollateralBalance()).toBe(5006)
+    expect(layer.getCollateralBalance()).toEqual({ success: true, value: 5006 })
   })
 
   it('rejects closing a position that does not exist', () => {
@@ -526,5 +526,23 @@ describe('LiquidLayer', () => {
       error: { type: 'PositionNotFound', id: 'pos-9' },
     })
     expect(closePosition).not.toHaveBeenCalled()
+  })
+
+  it('propagates an upstream failure when the collateral balance cannot be read', () => {
+    const getCollateralBalance = vi.fn(() => ({
+      success: false as const,
+      error: {
+        type: 'UpstreamFailure' as const,
+        operation: 'getCollateralBalance',
+      },
+    }))
+    const provider = fakeProvider({ getCollateralBalance })
+    const layer = new LiquidLayer(provider)
+
+    expect(layer.openPosition(Side.Long, 1, 60000)).toEqual({
+      success: false,
+      error: { type: 'UpstreamFailure', operation: 'getCollateralBalance' },
+    })
+    expect(provider.openPosition).not.toHaveBeenCalled()
   })
 })

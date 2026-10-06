@@ -1,5 +1,10 @@
 import { vi } from 'vitest'
-import { Side, type LiquidityProvider } from '../liquid-layer'
+import {
+  Side,
+  type LiquidityProvider,
+  type Result,
+  type UpstreamFailure,
+} from '../liquid-layer'
 import { fakeProvider } from './fake-provider'
 
 export function fakeCollateralProvider(
@@ -28,7 +33,9 @@ export function fakeCollateralProvider(
     return balance
   })
 
-  const getCollateralBalance = vi.fn((): number => balance)
+  const getCollateralBalance = vi.fn(
+    (): Result<number, UpstreamFailure> => ({ success: true, value: balance }),
+  )
 
   const provider: LiquidityProvider = fakeProvider({
     depositCollateral,

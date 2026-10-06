@@ -46,6 +46,11 @@ export type InvalidPrice = {
   readonly price: number
 }
 
+export type UpstreamFailure = {
+  readonly type: 'UpstreamFailure'
+  readonly operation: string
+}
+
 export type Result<T, E extends DomainError> =
   | { success: true; value: T }
   | { success: false; error: E }
@@ -65,7 +70,7 @@ export interface LiquidityProvider {
   withdrawCollateral(amount: number): number
   settlePnl(amount: number): number
   settleFunding(amount: number): number
-  getCollateralBalance(): number
+  getCollateralBalance(): Result<Money, UpstreamFailure>
   getRequiredMargin(side: Side, size: number, entryPrice: number): number
   getMaintenanceMargin(side: Side, size: number, entryPrice: number): number
   getFundingRate(): number
@@ -92,7 +97,10 @@ export class LiquidLayer {
     side: Side,
     size: number,
     entryPrice: number,
-  ): Result<Position, InsufficientMargin | InvalidSize | InvalidPrice> {
+  ): Result<
+    Position,
+    InsufficientMargin | InvalidSize | InvalidPrice | UpstreamFailure
+  > {
     if (size <= 0) {
       return fail({ type: 'InvalidSize', size })
     }
@@ -105,11 +113,14 @@ export class LiquidLayer {
       entryPrice,
     )
     const balance = this.provider.getCollateralBalance()
-    if (balance < requiredMargin) {
+    if (!balance.success) {
+      return balance
+    }
+    if (balance.value < requiredMargin) {
       return fail({
         type: 'InsufficientMargin',
         required: requiredMargin,
-        available: balance,
+        available: balance.value,
       })
     }
     return {
@@ -127,6 +138,7 @@ export class LiquidLayer {
     | InvalidPrice
     | PositionAlreadyClosed
     | InsufficientBalance
+    | UpstreamFailure
   > {
     const open = this.ensurePricedOpen(id, exitPrice)
     if (!open.success) {
@@ -140,11 +152,14 @@ export class LiquidLayer {
       current.size,
     )
     const balance = this.provider.getCollateralBalance()
-    if (balance + provisionalPnl < 0) {
+    if (!balance.success) {
+      return balance
+    }
+    if (balance.value + provisionalPnl < 0) {
       return fail({
         type: 'InsufficientBalance',
         requested: -provisionalPnl,
-        available: balance,
+        available: balance.value,
       })
     }
     return { success: true, value: this.closeAndSettle(current, id, exitPrice) }
@@ -201,22 +216,25 @@ export class LiquidLayer {
 
   withdrawCollateral(
     amount: number,
-  ): Result<number, InsufficientBalance | InvalidAmount> {
+  ): Result<number, InsufficientBalance | InvalidAmount | UpstreamFailure> {
     if (amount < 0) {
       return fail({ type: 'InvalidAmount', amount })
     }
     const balance = this.provider.getCollateralBalance()
-    if (amount > balance) {
+    if (!balance.success) {
+      return balance
+    }
+    if (amount > balance.value) {
       return fail({
         type: 'InsufficientBalance',
         requested: amount,
-        available: balance,
+        available: balance.value,
       })
     }
     return { success: true, value: this.provider.withdrawCollateral(amount) }
   }
 
-  getCollateralBalance(): number {
+  getCollateralBalance(): Result<Money, UpstreamFailure> {
     return this.provider.getCollateralBalance()
   }
 
@@ -235,20 +253,33 @@ export class LiquidLayer {
     markPrice: number,
   ): Result<
     number,
-    InvalidPrice | PositionNotFound | PositionAlreadyClosed
+    InvalidPrice | PositionNotFound | PositionAlreadyClosed | UpstreamFailure
   > {
     const open = this.ensurePricedOpen(id, markPrice)
     if (!open.success) {
       return open
     }
-    return { success: true, value: this.equityOf(open.value, markPrice) }
+    const equity = this.equityOf(open.value, markPrice)
+    if (!equity.success) {
+      return equity
+    }
+    return equity
   }
 
-  private equityOf(position: Position, markPrice: number): number {
-    return (
-      this.provider.getCollateralBalance() +
-      pnl(position.side, position.entryPrice, markPrice, position.size)
-    )
+  private equityOf(
+    position: Position,
+    markPrice: number,
+  ): Result<number, UpstreamFailure> {
+    const balance = this.provider.getCollateralBalance()
+    if (!balance.success) {
+      return balance
+    }
+    return {
+      success: true,
+      value:
+        balance.value +
+        pnl(position.side, position.entryPrice, markPrice, position.size),
+    }
   }
 
   checkLiquidation(
@@ -256,7 +287,7 @@ export class LiquidLayer {
     markPrice: number,
   ): Result<
     { liquidated: boolean; exitPrice?: number; realizedPnl?: number },
-    PositionNotFound | InvalidPrice | PositionAlreadyClosed
+    PositionNotFound | InvalidPrice | PositionAlreadyClosed | UpstreamFailure
   > {
     const open = this.ensurePricedOpen(id, markPrice)
     if (!open.success) {
@@ -268,7 +299,11 @@ export class LiquidLayer {
       position.size,
       position.entryPrice,
     )
-    if (this.equityOf(position, markPrice) >= maintenance) {
+    const equity = this.equityOf(position, markPrice)
+    if (!equity.success) {
+      return equity
+    }
+    if (equity.value >= maintenance) {
       return { success: true, value: { liquidated: false } }
     }
     const { realizedPnl } = this.closeAndSettle(position, id, markPrice)
