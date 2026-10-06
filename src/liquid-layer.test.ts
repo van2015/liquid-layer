@@ -153,4 +153,21 @@ describe('LiquidLayer', () => {
     expect(settlePnl).toHaveBeenCalledTimes(1)
     expect(settlePnl).toHaveBeenCalledWith(1000)
   })
+
+  it('a consumer queries an open position by id through the layer without knowing the protocol', () => {
+    const getPosition = vi.fn(
+      (id: string): Position =>
+        aPosition().id(id).long().size(1).entryPrice(60000).build(),
+    )
+    const provider = fakeProvider({ getPosition })
+    const layer = new LiquidLayer(provider)
+
+    const position = layer.getPosition('pos-1')
+
+    expect(position).toEqual(
+      aPosition().id('pos-1').long().size(1).entryPrice(60000).build(),
+    )
+    expect(getPosition).toHaveBeenCalledTimes(1)
+    expect(getPosition).toHaveBeenCalledWith('pos-1')
+  })
 })

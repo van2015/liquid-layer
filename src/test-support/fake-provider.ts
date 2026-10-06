@@ -12,6 +12,7 @@ export function fakeProvider(
     settlePnl: vi.fn(),
     getCollateralBalance: vi.fn(() => 10000),
     getRequiredMargin: vi.fn(() => 0),
+    getPosition: vi.fn(),
     ...overrides,
   }
 }

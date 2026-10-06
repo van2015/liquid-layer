@@ -19,6 +19,7 @@ export interface LiquidityProvider {
   settlePnl(amount: number): number
   getCollateralBalance(): number
   getRequiredMargin(side: Side, size: number, entryPrice: number): number
+  getPosition(id: string): Position
 }
 
 export class LiquidLayer {
@@ -58,5 +59,9 @@ export class LiquidLayer {
 
   getCollateralBalance(): number {
     return this.provider.getCollateralBalance()
+  }
+
+  getPosition(id: string): Position {
+    return this.provider.getPosition(id)
   }
 }
