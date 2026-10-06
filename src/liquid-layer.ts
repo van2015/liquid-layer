@@ -208,11 +208,7 @@ export class LiquidLayer {
         available: balance.value,
       })
     }
-    const settled = await this.closeAndSettle(current, id, exitPrice)
-    if (!settled.success) {
-      return settled
-    }
-    return settled
+    return this.closeAndSettle(current, id, exitPrice)
   }
 
   private async closeAndSettle(
