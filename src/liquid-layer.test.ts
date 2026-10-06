@@ -545,4 +545,22 @@ describe('LiquidLayer', () => {
     })
     expect(provider.openPosition).not.toHaveBeenCalled()
   })
+
+  it('propagates an upstream failure when the required margin cannot be read', () => {
+    const getRequiredMargin = vi.fn(() => ({
+      success: false as const,
+      error: {
+        type: 'UpstreamFailure' as const,
+        operation: 'getRequiredMargin',
+      },
+    }))
+    const provider = fakeProvider({ getRequiredMargin })
+    const layer = new LiquidLayer(provider)
+
+    expect(layer.openPosition(Side.Long, 1, 60000)).toEqual({
+      success: false,
+      error: { type: 'UpstreamFailure', operation: 'getRequiredMargin' },
+    })
+    expect(provider.openPosition).not.toHaveBeenCalled()
+  })
 })

@@ -43,10 +43,14 @@ export function fakeCollateralProvider(
     getCollateralBalance,
     settlePnl,
     settleFunding,
-    getRequiredMargin: (_side: Side, size: number, entryPrice: number) =>
-      size * entryPrice * 0.1,
-    getMaintenanceMargin: (_side: Side, size: number, entryPrice: number) =>
-      size * entryPrice * 0.05,
+    getRequiredMargin: (_side: Side, size: number, entryPrice: number) => ({
+      success: true as const,
+      value: size * entryPrice * 0.1,
+    }),
+    getMaintenanceMargin: (_side: Side, size: number, entryPrice: number) => ({
+      success: true as const,
+      value: size * entryPrice * 0.05,
+    }),
     ...overrides,
   })
 

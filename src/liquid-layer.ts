@@ -71,8 +71,16 @@ export interface LiquidityProvider {
   settlePnl(amount: number): number
   settleFunding(amount: number): number
   getCollateralBalance(): Result<Money, UpstreamFailure>
-  getRequiredMargin(side: Side, size: number, entryPrice: number): number
-  getMaintenanceMargin(side: Side, size: number, entryPrice: number): number
+  getRequiredMargin(
+    side: Side,
+    size: number,
+    entryPrice: number,
+  ): Result<Money, UpstreamFailure>
+  getMaintenanceMargin(
+    side: Side,
+    size: number,
+    entryPrice: number,
+  ): Result<Money, UpstreamFailure>
   getFundingRate(): number
   getPosition(id: string): Result<Position, PositionNotFound>
   listPositions(): Position[]
@@ -112,14 +120,17 @@ export class LiquidLayer {
       size,
       entryPrice,
     )
+    if (!requiredMargin.success) {
+      return requiredMargin
+    }
     const balance = this.provider.getCollateralBalance()
     if (!balance.success) {
       return balance
     }
-    if (balance.value < requiredMargin) {
+    if (balance.value < requiredMargin.value) {
       return fail({
         type: 'InsufficientMargin',
-        required: requiredMargin,
+        required: requiredMargin.value,
         available: balance.value,
       })
     }
@@ -299,11 +310,14 @@ export class LiquidLayer {
       position.size,
       position.entryPrice,
     )
+    if (!maintenance.success) {
+      return maintenance
+    }
     const equity = this.equityOf(position, markPrice)
     if (!equity.success) {
       return equity
     }
-    if (equity.value >= maintenance) {
+    if (equity.value >= maintenance.value) {
       return { success: true, value: { liquidated: false } }
     }
     const { realizedPnl } = this.closeAndSettle(position, id, markPrice)
