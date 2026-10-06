@@ -31,6 +31,11 @@ export type InvalidAmount = {
   readonly amount: Money
 }
 
+export type InvalidSize = {
+  readonly type: 'InvalidSize'
+  readonly size: number
+}
+
 export type Result<T, E extends DomainError> =
   | { success: true; value: T }
   | { success: false; error: E }
@@ -63,7 +68,13 @@ export class LiquidLayer {
     side: Side,
     size: number,
     entryPrice: number,
-  ): Result<Position, InsufficientMargin> {
+  ): Result<Position, InsufficientMargin | InvalidSize> {
+    if (size <= 0) {
+      return {
+        success: false,
+        error: { type: 'InvalidSize', size },
+      }
+    }
     const requiredMargin = this.provider.getRequiredMargin(
       side,
       size,
