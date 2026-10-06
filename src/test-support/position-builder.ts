@@ -1,9 +1,9 @@
-import type { Position } from '../liquid-layer'
+import { Side, type Position } from '../liquid-layer'
 
 export class PositionBuilder {
   private readonly state: Position = {
     id: 'pos-1',
-    side: 'long',
+    side: Side.Long,
     size: 1,
     entryPrice: 0,
   }
@@ -13,17 +13,17 @@ export class PositionBuilder {
     return this
   }
 
-  side(side: 'long' | 'short'): this {
+  side(side: Side): this {
     this.state.side = side
     return this
   }
 
   long(): this {
-    return this.side('long')
+    return this.side(Side.Long)
   }
 
   short(): this {
-    return this.side('short')
+    return this.side(Side.Short)
   }
 
   size(size: number): this {

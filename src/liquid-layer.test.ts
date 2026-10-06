@@ -1,8 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import {
-  LiquidLayer,
-  type Position,
-} from './liquid-layer'
+import { LiquidLayer, Side, type Position } from './liquid-layer'
 import { fakeProvider } from './test-support/fake-provider'
 import { fakeCollateralProvider } from './test-support/fake-collateral-provider'
 import { aPosition } from './test-support/position-builder'
@@ -10,7 +7,7 @@ import { aPosition } from './test-support/position-builder'
 describe('LiquidLayer', () => {
   it('a consumer opens a long position through LiquidLayer without knowing the underlying liquidity provider', () => {
     const openPosition = vi.fn(
-      (params: { side: 'long' | 'short'; size: number; entryPrice: number }): Position =>
+      (params: { side: Side; size: number; entryPrice: number }): Position =>
         aPosition()
           .id('pos-1')
           .side(params.side)
@@ -22,7 +19,7 @@ describe('LiquidLayer', () => {
     const layer = new LiquidLayer(provider)
 
     const position = layer.openPosition({
-      side: 'long',
+      side: Side.Long,
       size: 1,
       entryPrice: 60000,
     })
@@ -32,7 +29,7 @@ describe('LiquidLayer', () => {
     )
     expect(openPosition).toHaveBeenCalledTimes(1)
     expect(openPosition).toHaveBeenCalledWith({
-      side: 'long',
+      side: Side.Long,
       size: 1,
       entryPrice: 60000,
     })
@@ -132,7 +129,7 @@ describe('LiquidLayer', () => {
     const layer = new LiquidLayer(provider)
 
     expect(() =>
-      layer.openPosition({ side: 'long', size: 1, entryPrice: 60000 }),
+      layer.openPosition({ side: Side.Long, size: 1, entryPrice: 60000 }),
     ).toThrow('insufficient margin')
     expect(provider.openPosition).not.toHaveBeenCalled()
   })

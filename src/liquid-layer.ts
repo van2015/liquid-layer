@@ -1,6 +1,11 @@
+export enum Side {
+  Long = 'long',
+  Short = 'short',
+}
+
 export interface Position {
   id: string
-  side: 'long' | 'short'
+  side: Side
   size: number
   entryPrice: number
   exitPrice?: number
@@ -8,7 +13,7 @@ export interface Position {
 
 export interface LiquidityProvider {
   openPosition(params: {
-    side: 'long' | 'short'
+    side: Side
     size: number
     entryPrice: number
   }): Position
@@ -17,7 +22,7 @@ export interface LiquidityProvider {
   withdrawCollateral(params: { amount: number }): number
   getCollateralBalance(): number
   getRequiredMargin(params: {
-    side: 'long' | 'short'
+    side: Side
     size: number
     entryPrice: number
   }): number
@@ -27,7 +32,7 @@ export class LiquidLayer {
   constructor(private readonly provider: LiquidityProvider) {}
 
   openPosition(params: {
-    side: 'long' | 'short'
+    side: Side
     size: number
     entryPrice: number
   }): Position {
@@ -44,7 +49,7 @@ export class LiquidLayer {
     exitPrice: number
   }): { realizedPnl: number; position: Position } {
     const position = this.provider.closePosition(params)
-    const direction = position.side === 'long' ? 1 : -1
+    const direction = position.side === Side.Long ? 1 : -1
     const realizedPnl =
       (params.exitPrice - position.entryPrice) * position.size * direction
     return { realizedPnl, position }
