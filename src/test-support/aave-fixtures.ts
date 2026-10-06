@@ -25,3 +25,9 @@ export const reserveBorrowDisabledFixture = {
     },
   },
 } as const
+
+export const reserveNotFoundFixture = {
+  data: {
+    reserve: null,
+  },
+} as const

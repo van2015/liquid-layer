@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from 'vitest'
 import { Side } from '../../liquid-layer'
-import { reserveWethFixture, reserveBorrowDisabledFixture } from '../../test-support/aave-fixtures'
+import {
+  reserveWethFixture,
+  reserveBorrowDisabledFixture,
+  reserveNotFoundFixture,
+} from '../../test-support/aave-fixtures'
 import { AaveProvider } from './aave-provider'
 import { GRAPHQL_URL } from './types'
 
@@ -132,6 +136,26 @@ describe('AaveProvider', () => {
     })
 
     const result = await provider.getFundingRate(Side.Long, 1, 60000)
+
+    expect(result).toEqual({
+      success: false,
+      error: { type: 'UpstreamFailure', operation: 'postGraphQL' },
+    })
+  })
+
+  it('returns an upstream failure when the reserve is not found', async () => {
+    const fetchFn = vi.fn(
+      async (): Promise<Response> =>
+        new Response(JSON.stringify(reserveNotFoundFixture), { status: 200 }),
+    )
+    const provider = new AaveProvider({
+      fetchFn,
+      market: MARKET,
+      underlyingToken: WETH,
+      chainId: '1',
+    })
+
+    const result = await provider.getRequiredMargin(Side.Long, 1, 60000)
 
     expect(result).toEqual({
       success: false,

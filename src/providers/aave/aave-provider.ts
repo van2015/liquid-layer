@@ -16,14 +16,16 @@ const RESERVE_QUERY = `query Reserve($market: EvmAddress!, $underlyingToken: Evm
 }`
 
 interface ReserveResponse {
-  reserve: {
-    supplyInfo: {
-      maxLTV: { value: string }
-      liquidationThreshold: { value: string }
-      apy: { value: string }
-    }
-    borrowInfo: { apy: { value: string } } | null
-  } | null
+  reserve: ReserveData | null
+}
+
+type ReserveData = {
+  supplyInfo: {
+    maxLTV: { value: string }
+    liquidationThreshold: { value: string }
+    apy: { value: string }
+  }
+  borrowInfo: { apy: { value: string } } | null
 }
 
 export interface AaveProviderConfig {
@@ -36,8 +38,8 @@ export interface AaveProviderConfig {
 export class AaveProvider {
   constructor(private readonly config: AaveProviderConfig) {}
 
-  private reserve(): Promise<Result<ReserveResponse, UpstreamFailure>> {
-    return postGraphQL<ReserveResponse>(
+  private async reserve(): Promise<Result<ReserveData, UpstreamFailure>> {
+    const response = await postGraphQL<ReserveResponse>(
       this.config.fetchFn,
       GRAPHQL_URL,
       RESERVE_QUERY,
@@ -47,6 +49,16 @@ export class AaveProvider {
         chainId: this.config.chainId,
       },
     )
+    if (!response.success) {
+      return response
+    }
+    if (response.value.reserve === null) {
+      return {
+        success: false,
+        error: { type: 'UpstreamFailure', operation: 'postGraphQL' },
+      }
+    }
+    return { success: true, value: response.value.reserve }
   }
 
   async getRequiredMargin(
@@ -58,7 +70,7 @@ export class AaveProvider {
     if (!reserve.success) {
       return reserve
     }
-    const maxLTV = parseFloat(reserve.value.reserve!.supplyInfo.maxLTV.value)
+    const maxLTV = parseFloat(reserve.value.supplyInfo.maxLTV.value)
     return { success: true, value: (size * entryPrice) / maxLTV }
   }
 
@@ -71,9 +83,7 @@ export class AaveProvider {
     if (!reserve.success) {
       return reserve
     }
-    const threshold = parseFloat(
-      reserve.value.reserve!.supplyInfo.liquidationThreshold.value,
-    )
+    const threshold = parseFloat(reserve.value.supplyInfo.liquidationThreshold.value)
     return { success: true, value: (size * entryPrice) / threshold }
   }
 
@@ -86,8 +96,8 @@ export class AaveProvider {
     if (!reserve.success) {
       return reserve
     }
-    const borrowInfo = reserve.value.reserve?.borrowInfo
-    if (borrowInfo === null || borrowInfo === undefined) {
+    const borrowInfo = reserve.value.borrowInfo
+    if (borrowInfo === null) {
       return {
         success: false,
         error: { type: 'UpstreamFailure', operation: 'postGraphQL' },
