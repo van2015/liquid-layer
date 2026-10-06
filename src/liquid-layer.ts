@@ -20,6 +20,12 @@ export type PositionNotFound = {
   readonly id: string
 }
 
+export type InsufficientBalance = {
+  readonly type: 'InsufficientBalance'
+  readonly requested: Money
+  readonly available: Money
+}
+
 export type Result<T, E extends DomainError> =
   | { success: true; value: T }
   | { success: false; error: E }
@@ -95,8 +101,19 @@ export class LiquidLayer {
     return this.provider.depositCollateral(amount)
   }
 
-  withdrawCollateral(amount: number): number {
-    return this.provider.withdrawCollateral(amount)
+  withdrawCollateral(amount: number): Result<number, InsufficientBalance> {
+    const balance = this.provider.getCollateralBalance()
+    if (amount > balance) {
+      return {
+        success: false,
+        error: {
+          type: 'InsufficientBalance',
+          requested: amount,
+          available: balance,
+        },
+      }
+    }
+    return { success: true, value: this.provider.withdrawCollateral(amount) }
   }
 
   getCollateralBalance(): number {

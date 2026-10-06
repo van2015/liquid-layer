@@ -116,11 +116,22 @@ describe('LiquidLayer', () => {
     const layer = new LiquidLayer(provider)
 
     layer.depositCollateral(1000)
-    const updatedBalance = layer.withdrawCollateral(400)
+    const result = layer.withdrawCollateral(400)
 
-    expect(updatedBalance).toBe(600)
+    expect(result).toEqual({ success: true, value: 600 })
     expect(withdrawCollateral).toHaveBeenCalledTimes(1)
     expect(withdrawCollateral).toHaveBeenCalledWith(400)
+  })
+
+  it('rejects withdrawing more collateral than the available balance', () => {
+    const { provider, withdrawCollateral } = fakeCollateralProvider(500)
+    const layer = new LiquidLayer(provider)
+
+    expect(layer.withdrawCollateral(1000)).toEqual({
+      success: false,
+      error: { type: 'InsufficientBalance', requested: 1000, available: 500 },
+    })
+    expect(withdrawCollateral).not.toHaveBeenCalled()
   })
 
   it('rejects opening a position when collateral is below the required initial margin', () => {
