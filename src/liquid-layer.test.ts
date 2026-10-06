@@ -221,6 +221,27 @@ describe('LiquidLayer', () => {
     expect(layer.getCollateralBalance()).toBe(4994)
   })
 
+  it('credits funding to a short position when the rate is positive', () => {
+    const getPosition = vi.fn(
+      (id: string): Result<Position, PositionNotFound> => ({
+        success: true,
+        value: aPosition().id(id).short().size(1).entryPrice(60000).build(),
+      }),
+    )
+    const { provider, settleFunding } = fakeCollateralProvider(5000, {
+      getPosition,
+      getFundingRate: () => 0.0001,
+    })
+    const layer = new LiquidLayer(provider)
+
+    const result = layer.payFunding('pos-2')
+
+    expect(result).toEqual({ success: true, value: undefined })
+    expect(settleFunding).toHaveBeenCalledTimes(1)
+    expect(settleFunding).toHaveBeenCalledWith(6)
+    expect(layer.getCollateralBalance()).toBe(5006)
+  })
+
   it('rejects closing a position that does not exist', () => {
     const closePosition = vi.fn(
       (id: string, exitPrice: number): Position =>

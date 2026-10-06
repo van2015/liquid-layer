@@ -112,9 +112,9 @@ export class LiquidLayer {
     if (!found.success) {
       return found
     }
-    const { size, entryPrice } = found.value
+    const { size, entryPrice, side } = found.value
     const amount = size * entryPrice * this.provider.getFundingRate()
-    this.provider.settleFunding(-amount)
+    this.provider.settleFunding(side === Side.Long ? -amount : amount)
     return { success: true, value: undefined }
   }
 }
