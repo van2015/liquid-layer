@@ -61,4 +61,19 @@ export class AaveProvider {
     const maxLTV = parseFloat(reserve.value.reserve!.supplyInfo.maxLTV.value)
     return { success: true, value: (size * entryPrice) / maxLTV }
   }
+
+  async getMaintenanceMargin(
+    side: Side,
+    size: number,
+    entryPrice: number,
+  ): Promise<Result<number, UpstreamFailure>> {
+    const reserve = await this.reserve()
+    if (!reserve.success) {
+      return reserve
+    }
+    const threshold = parseFloat(
+      reserve.value.reserve!.supplyInfo.liquidationThreshold.value,
+    )
+    return { success: true, value: (size * entryPrice) / threshold }
+  }
 }

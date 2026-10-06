@@ -43,4 +43,30 @@ describe('AaveProvider', () => {
       chainId: '1',
     })
   })
+
+  it('reads the maintenance margin from the reserve liquidation threshold', async () => {
+    const fetchFn = vi.fn(
+      async (
+        _input: string | URL | Request,
+        _init?: RequestInit,
+      ): Promise<Response> =>
+        new Response(JSON.stringify(reserveWethFixture), { status: 200 }),
+    )
+    const provider = new AaveProvider({
+      fetchFn,
+      market: MARKET,
+      underlyingToken: WETH,
+      chainId: '1',
+    })
+
+    const result = await provider.getMaintenanceMargin(Side.Long, 1, 83000)
+
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.value).toBeCloseTo(100000)
+    }
+    const [, init] = fetchFn.mock.calls[0]!
+    const body = JSON.parse(String(init?.body)) as { query: string }
+    expect(body.query).toContain('liquidationThreshold { value }')
+  })
 })
