@@ -166,6 +166,19 @@ export class LiquidLayer {
     return { realizedPnl, position }
   }
 
+  private ensureOpen(
+    id: string,
+  ): Result<Position, PositionNotFound | PositionAlreadyClosed> {
+    const found = this.provider.getPosition(id)
+    if (!found.success) {
+      return found
+    }
+    if (found.value.exitPrice !== undefined) {
+      return fail({ type: 'PositionAlreadyClosed', id })
+    }
+    return { success: true, value: found.value }
+  }
+
   private ensureClosable(
     id: string,
     price: number,
@@ -176,14 +189,7 @@ export class LiquidLayer {
     if (price <= 0) {
       return fail({ type: 'InvalidPrice', price })
     }
-    const found = this.provider.getPosition(id)
-    if (!found.success) {
-      return found
-    }
-    if (found.value.exitPrice !== undefined) {
-      return fail({ type: 'PositionAlreadyClosed', id })
-    }
-    return { success: true, value: found.value }
+    return this.ensureOpen(id)
   }
 
   depositCollateral(amount: number): Result<number, InvalidAmount> {
@@ -267,14 +273,11 @@ export class LiquidLayer {
   payFunding(
     id: string,
   ): Result<void, PositionNotFound | PositionAlreadyClosed> {
-    const found = this.provider.getPosition(id)
-    if (!found.success) {
-      return found
+    const open = this.ensureOpen(id)
+    if (!open.success) {
+      return open
     }
-    if (found.value.exitPrice !== undefined) {
-      return fail({ type: 'PositionAlreadyClosed', id })
-    }
-    const { size, entryPrice, side } = found.value
+    const { size, entryPrice, side } = open.value
     const amount = size * entryPrice * this.provider.getFundingRate()
     this.provider.settleFunding(side === Side.Long ? -amount : amount)
     return { success: true, value: undefined }
