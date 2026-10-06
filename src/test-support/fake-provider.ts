@@ -15,7 +15,7 @@ export function fakeProvider(
     getRequiredMargin: vi.fn(() => 0),
     getFundingRate: vi.fn(() => 0),
     getPosition: vi.fn((id: string) => ({
-      ok: true as const,
+      success: true as const,
       value: { id, side: Side.Long, size: 1, entryPrice: 0 },
     })),
     ...overrides,

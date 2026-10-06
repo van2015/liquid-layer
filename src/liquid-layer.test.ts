@@ -3,7 +3,7 @@ import {
   LiquidLayer,
   Side,
   type Position,
-  type PositionNotFoundError,
+  type PositionNotFound,
   type Result,
 } from './liquid-layer'
 import { fakeProvider } from './test-support/fake-provider'
@@ -27,7 +27,7 @@ describe('LiquidLayer', () => {
     const result = layer.openPosition(Side.Long, 1, 60000)
 
     expect(result).toEqual({
-      ok: true,
+      success: true,
       value: aPosition().id('pos-1').long().size(1).entryPrice(60000).build(),
     })
     expect(openPosition).toHaveBeenCalledTimes(1)
@@ -51,7 +51,7 @@ describe('LiquidLayer', () => {
     const result = layer.closePosition('pos-1', 61000)
 
     expect(result).toEqual({
-      ok: true,
+      success: true,
       value: {
         realizedPnl: 1000,
         position: aPosition()
@@ -84,7 +84,7 @@ describe('LiquidLayer', () => {
     const result = layer.closePosition('pos-2', 59000)
 
     expect(result).toEqual({
-      ok: true,
+      success: true,
       value: {
         realizedPnl: 1000,
         position: aPosition()
@@ -128,8 +128,8 @@ describe('LiquidLayer', () => {
     const layer = new LiquidLayer(provider)
 
     expect(layer.openPosition(Side.Long, 1, 60000)).toEqual({
-      ok: false,
-      error: { kind: 'insufficientMargin' },
+      success: false,
+      error: { type: 'InsufficientMargin', required: 6000, available: 500 },
     })
     expect(provider.openPosition).not.toHaveBeenCalled()
   })
@@ -163,7 +163,7 @@ describe('LiquidLayer', () => {
     const result = layer.closePosition('pos-1', 61000)
 
     expect(result).toEqual({
-      ok: true,
+      success: true,
       value: {
         realizedPnl: 1000,
         position: aPosition()
@@ -182,8 +182,8 @@ describe('LiquidLayer', () => {
 
   it('a consumer queries an open position by id through the layer without knowing the protocol', () => {
     const getPosition = vi.fn(
-      (id: string): Result<Position, PositionNotFoundError> => ({
-        ok: true,
+      (id: string): Result<Position, PositionNotFound> => ({
+        success: true,
         value: aPosition().id(id).long().size(1).entryPrice(60000).build(),
       }),
     )
@@ -193,7 +193,7 @@ describe('LiquidLayer', () => {
     const result = layer.getPosition('pos-1')
 
     expect(result).toEqual({
-      ok: true,
+      success: true,
       value: aPosition().id('pos-1').long().size(1).entryPrice(60000).build(),
     })
     expect(getPosition).toHaveBeenCalledTimes(1)
@@ -202,8 +202,8 @@ describe('LiquidLayer', () => {
 
   it('charges funding on a long position and reduces the collateral balance', () => {
     const getPosition = vi.fn(
-      (id: string): Result<Position, PositionNotFoundError> => ({
-        ok: true,
+      (id: string): Result<Position, PositionNotFound> => ({
+        success: true,
         value: aPosition().id(id).long().size(1).entryPrice(60000).build(),
       }),
     )
@@ -215,7 +215,7 @@ describe('LiquidLayer', () => {
 
     const result = layer.payFunding('pos-1')
 
-    expect(result).toEqual({ ok: true, value: undefined })
+    expect(result).toEqual({ success: true, value: undefined })
     expect(settleFunding).toHaveBeenCalledTimes(1)
     expect(settleFunding).toHaveBeenCalledWith(-6)
     expect(layer.getCollateralBalance()).toBe(4994)
@@ -233,10 +233,10 @@ describe('LiquidLayer', () => {
           .build(),
     )
     const getPosition = vi.fn(
-      (id: string): Result<Position, PositionNotFoundError> =>
+      (id: string): Result<Position, PositionNotFound> =>
         id === 'pos-1'
           ? {
-              ok: true,
+              success: true,
               value: aPosition()
                 .id(id)
                 .long()
@@ -244,7 +244,7 @@ describe('LiquidLayer', () => {
                 .entryPrice(60000)
                 .build(),
             }
-          : { ok: false, error: { kind: 'positionNotFound', id } },
+          : { success: false, error: { type: 'PositionNotFound', id } },
     )
     const { provider } = fakeCollateralProvider(5000, {
       closePosition,
@@ -253,8 +253,8 @@ describe('LiquidLayer', () => {
     const layer = new LiquidLayer(provider)
 
     expect(layer.closePosition('pos-9', 1000)).toEqual({
-      ok: false,
-      error: { kind: 'positionNotFound', id: 'pos-9' },
+      success: false,
+      error: { type: 'PositionNotFound', id: 'pos-9' },
     })
     expect(closePosition).not.toHaveBeenCalled()
   })
