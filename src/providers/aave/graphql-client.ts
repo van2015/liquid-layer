@@ -11,11 +11,19 @@ export async function postGraphQL<T>(
   query: string,
   variables: Record<string, unknown>,
 ): Promise<Result<T, UpstreamFailure>> {
-  const response = await fetchFn(url, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ query, variables }),
-  })
+  let response: Response
+  try {
+    response = await fetchFn(url, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ query, variables }),
+    })
+  } catch {
+    return {
+      success: false,
+      error: { type: 'UpstreamFailure', operation: 'postGraphQL' },
+    }
+  }
   if (!response.ok) {
     return {
       success: false,
