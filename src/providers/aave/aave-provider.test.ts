@@ -311,4 +311,28 @@ describe('AaveProvider', () => {
       expect(result.value.exitPrice).toBeUndefined()
     }
   })
+
+  it('returns position not found when the id does not match the reserve', async () => {
+    const fetchFn = vi.fn(
+      async (): Promise<Response> =>
+        new Response(JSON.stringify(userPositionsWithWethDebtFixture), {
+          status: 200,
+        }),
+    )
+    const provider = new AaveProvider({
+      fetchFn,
+      market: MARKET,
+      underlyingToken: WETH,
+      chainId: '1',
+      user: '0x772439Ea39a64340DcD348618C15a483D0db4c18',
+    })
+
+    const result = await provider.getPosition('99:wrong:address')
+
+    expect(result).toEqual({
+      success: false,
+      error: { type: 'PositionNotFound', id: '99:wrong:address' },
+    })
+    expect(fetchFn).not.toHaveBeenCalled()
+  })
 })

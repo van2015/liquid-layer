@@ -189,6 +189,9 @@ export class AaveProvider {
   async getPosition(
     id: string,
   ): Promise<Result<Position, PositionNotFound | UpstreamFailure>> {
+    if (id !== this.positionId()) {
+      return { success: false, error: { type: 'PositionNotFound', id } }
+    }
     const positions = await this.positions()
     if (!positions.success) {
       return positions
