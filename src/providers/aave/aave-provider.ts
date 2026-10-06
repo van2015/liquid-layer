@@ -140,7 +140,14 @@ export class AaveProvider {
     if (!response.success) {
       return response
     }
-    const userState = response.value.reserve!.userState
+    const reserve = response.value.reserve
+    if (reserve === null) {
+      return {
+        success: false,
+        error: { type: 'UpstreamFailure', operation: 'postGraphQL' },
+      }
+    }
+    const userState = reserve.userState
     if (userState === null) {
       return { success: true, value: 0 }
     }

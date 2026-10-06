@@ -220,4 +220,25 @@ describe('AaveProvider', () => {
 
     expect(result).toEqual({ success: true, value: 0 })
   })
+
+  it('returns an upstream failure when the user reserve cannot be found', async () => {
+    const fetchFn = vi.fn(
+      async (): Promise<Response> =>
+        new Response(JSON.stringify(reserveNotFoundFixture), { status: 200 }),
+    )
+    const provider = new AaveProvider({
+      fetchFn,
+      market: MARKET,
+      underlyingToken: WETH,
+      chainId: '1',
+      user: USER,
+    })
+
+    const result = await provider.getCollateralBalance()
+
+    expect(result).toEqual({
+      success: false,
+      error: { type: 'UpstreamFailure', operation: 'postGraphQL' },
+    })
+  })
 })
