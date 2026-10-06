@@ -39,4 +39,18 @@ describe('postGraphQL', () => {
       'application/json',
     )
   })
+
+  it('returns an upstream failure when the response is not ok', async () => {
+    const fetchFn = vi.fn(
+      async (): Promise<Response> =>
+        new Response('internal error', { status: 500 }),
+    )
+
+    const result = await postGraphQL(fetchFn, GRAPHQL_URL, 'query { x }', {})
+
+    expect(result).toEqual({
+      success: false,
+      error: { type: 'UpstreamFailure', operation: 'postGraphQL' },
+    })
+  })
 })
