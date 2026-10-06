@@ -5,6 +5,7 @@ import {
   reserveBorrowDisabledFixture,
   reserveNotFoundFixture,
   reserveWithUserFixture,
+  reserveNoPositionFixture,
 } from '../../test-support/aave-fixtures'
 import { AaveProvider } from './aave-provider'
 import { GRAPHQL_URL } from './types'
@@ -200,5 +201,23 @@ describe('AaveProvider', () => {
     }
     expect(body.query).toContain('userState')
     expect(body.variables.user).toBe(USER)
+  })
+
+  it('returns zero collateral when the user has no position on the reserve', async () => {
+    const fetchFn = vi.fn(
+      async (): Promise<Response> =>
+        new Response(JSON.stringify(reserveNoPositionFixture), { status: 200 }),
+    )
+    const provider = new AaveProvider({
+      fetchFn,
+      market: MARKET,
+      underlyingToken: WETH,
+      chainId: '1',
+      user: USER,
+    })
+
+    const result = await provider.getCollateralBalance()
+
+    expect(result).toEqual({ success: true, value: 0 })
   })
 })

@@ -140,7 +140,10 @@ export class AaveProvider {
     if (!response.success) {
       return response
     }
-    const balance = response.value.reserve!.userState!.balance.amount.value
-    return { success: true, value: parseFloat(balance) }
+    const userState = response.value.reserve!.userState
+    if (userState === null) {
+      return { success: true, value: 0 }
+    }
+    return { success: true, value: parseFloat(userState.balance.amount.value) }
   }
 }

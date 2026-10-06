@@ -45,3 +45,11 @@ export const reserveWithUserFixture = {
     },
   },
 } as const
+
+export const reserveNoPositionFixture = {
+  data: {
+    reserve: {
+      userState: null,
+    },
+  },
+} as const
