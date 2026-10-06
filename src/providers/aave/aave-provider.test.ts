@@ -357,4 +357,37 @@ describe('AaveProvider', () => {
       error: { type: 'PositionNotFound', id: positionId },
     })
   })
+
+  it('lists the current reserve position as a single entry', async () => {
+    const fetchFn = vi.fn(
+      async (
+        _input: string | URL | Request,
+        _init?: RequestInit,
+      ): Promise<Response> =>
+        new Response(JSON.stringify(userPositionsWithWethDebtFixture), {
+          status: 200,
+        }),
+    )
+    const provider = new AaveProvider({
+      fetchFn,
+      market: MARKET,
+      underlyingToken: WETH,
+      chainId: '1',
+      user: '0x772439Ea39a64340DcD348618C15a483D0db4c18',
+    })
+    const positionId = `1:${MARKET}:${WETH}`
+
+    const result = await provider.listPositions()
+
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.value).toHaveLength(1)
+      const [position] = result.value
+      expect(position.id).toBe(positionId)
+      expect(position.side).toBe(Side.Long)
+      expect(position.size).toBeCloseTo(0.025294505537082373, 15)
+      expect(position.entryPrice).toBeCloseTo(2717.27, 1)
+      expect(position.exitPrice).toBeUndefined()
+    }
+  })
 })

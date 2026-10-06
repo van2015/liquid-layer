@@ -233,4 +233,15 @@ export class AaveProvider {
     }
     return { success: false, error: { type: 'PositionNotFound', id } }
   }
+
+  async listPositions(): Promise<Result<Position[], UpstreamFailure>> {
+    const position = await this.getPosition(this.positionId())
+    if (!position.success) {
+      if (position.error.type === 'PositionNotFound') {
+        return { success: true, value: [] }
+      }
+      return { success: false, error: position.error }
+    }
+    return { success: true, value: [position.value] }
+  }
 }
