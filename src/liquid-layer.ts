@@ -131,23 +131,18 @@ const pnl = (
 export class LiquidLayer {
   constructor(private readonly provider: LiquidityProvider) {}
 
-  async openPosition(
-    side: Side,
-    size: number,
-    entryPrice: number,
-  ): Promise<
+  async openPosition(trade: Trade): Promise<
     Result<
       TransactionRequest,
       InsufficientMargin | InvalidSize | InvalidPrice | UpstreamFailure
     >
   > {
-    if (size <= 0) {
-      return fail({ type: 'InvalidSize', size })
+    if (trade.size <= 0) {
+      return fail({ type: 'InvalidSize', size: trade.size })
     }
-    if (entryPrice <= 0) {
-      return fail({ type: 'InvalidPrice', price: entryPrice })
+    if (trade.entryPrice <= 0) {
+      return fail({ type: 'InvalidPrice', price: trade.entryPrice })
     }
-    const trade = { side, size, entryPrice }
     const requiredMargin = await this.provider.getRequiredMargin(trade)
     if (!requiredMargin.success) {
       return requiredMargin

@@ -23,7 +23,7 @@ describe('LiquidLayer', async () => {
     const provider = fakeProvider({ openPosition })
     const layer = new LiquidLayer(provider)
 
-    const result = await layer.openPosition(Side.Long, 1, 60000)
+    const result = await layer.openPosition({ side: Side.Long, size: 1, entryPrice: 60000 })
 
     expect(result).toEqual({ success: true, value: preparedTx })
     expect(openPosition).toHaveBeenCalledTimes(1)
@@ -146,7 +146,7 @@ describe('LiquidLayer', async () => {
     const { provider } = fakeCollateralProvider(500)
     const layer = new LiquidLayer(provider)
 
-    expect(await layer.openPosition(Side.Long, 1, 60000)).toEqual({
+    expect(await layer.openPosition({ side: Side.Long, size: 1, entryPrice: 60000 })).toEqual({
       success: false,
       error: { type: 'InsufficientMargin', required: 6000, available: 500 },
     })
@@ -157,7 +157,9 @@ describe('LiquidLayer', async () => {
     const { provider } = fakeCollateralProvider(5000)
     const layer = new LiquidLayer(provider)
 
-    expect(await layer.openPosition(Side.Long, 0, 60000)).toEqual({
+    expect(
+      await layer.openPosition({ side: Side.Long, size: 0, entryPrice: 60000 }),
+    ).toEqual({
       success: false,
       error: { type: 'InvalidSize', size: 0 },
     })
@@ -168,7 +170,9 @@ describe('LiquidLayer', async () => {
     const { provider } = fakeCollateralProvider(5000)
     const layer = new LiquidLayer(provider)
 
-    expect(await layer.openPosition(Side.Long, 1, 0)).toEqual({
+    expect(
+      await layer.openPosition({ side: Side.Long, size: 1, entryPrice: 0 }),
+    ).toEqual({
       success: false,
       error: { type: 'InvalidPrice', price: 0 },
     })
@@ -531,7 +535,7 @@ describe('LiquidLayer', async () => {
     const provider = fakeProvider({ getCollateralBalance })
     const layer = new LiquidLayer(provider)
 
-    expect(await layer.openPosition(Side.Long, 1, 60000)).toEqual({
+    expect(await layer.openPosition({ side: Side.Long, size: 1, entryPrice: 60000 })).toEqual({
       success: false,
       error: { type: 'UpstreamFailure', operation: 'getCollateralBalance' },
     })
@@ -549,7 +553,7 @@ describe('LiquidLayer', async () => {
     const provider = fakeProvider({ getRequiredMargin })
     const layer = new LiquidLayer(provider)
 
-    expect(await layer.openPosition(Side.Long, 1, 60000)).toEqual({
+    expect(await layer.openPosition({ side: Side.Long, size: 1, entryPrice: 60000 })).toEqual({
       success: false,
       error: { type: 'UpstreamFailure', operation: 'getRequiredMargin' },
     })
