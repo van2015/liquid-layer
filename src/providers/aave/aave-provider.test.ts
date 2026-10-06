@@ -9,6 +9,7 @@ import {
   userPositionsWithWethDebtFixture,
   userPositionsWithWethSupplyFixture,
 } from '../../test-support/aave-fixtures'
+import { aTrade } from '../../test-support/trade-builder'
 import { AaveProvider } from './aave-provider'
 import { GRAPHQL_URL } from './types'
 
@@ -33,11 +34,9 @@ describe('AaveProvider', () => {
       user: USER,
     })
 
-    const result = await provider.getRequiredMargin({
-      side: Side.Long,
-      size: 2,
-      entryPrice: 40250,
-    })
+    const result = await provider.getRequiredMargin(
+      aTrade().long().size(2).entryPrice(40250).build(),
+    )
 
     expect(result.success).toBe(true)
     if (result.success) {
@@ -74,11 +73,9 @@ describe('AaveProvider', () => {
       user: USER,
     })
 
-    const result = await provider.getMaintenanceMargin({
-      side: Side.Long,
-      size: 1,
-      entryPrice: 83000,
-    })
+    const result = await provider.getMaintenanceMargin(
+      aTrade().long().entryPrice(83000).build(),
+    )
 
     expect(result.success).toBe(true)
     if (result.success) {
@@ -102,11 +99,9 @@ describe('AaveProvider', () => {
       user: USER,
     })
 
-    const result = await provider.getRequiredMargin({
-      side: Side.Long,
-      size: 1,
-      entryPrice: 60000,
-    })
+    const result = await provider.getRequiredMargin(
+      aTrade().long().entryPrice(60000).build(),
+    )
 
     expect(result).toEqual({
       success: false,
@@ -178,11 +173,9 @@ describe('AaveProvider', () => {
       user: USER,
     })
 
-    const result = await provider.getRequiredMargin({
-      side: Side.Long,
-      size: 1,
-      entryPrice: 60000,
-    })
+    const result = await provider.getRequiredMargin(
+      aTrade().long().entryPrice(60000).build(),
+    )
 
     expect(result).toEqual({
       success: false,
