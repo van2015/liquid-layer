@@ -66,6 +66,11 @@ export interface LiquidityProvider {
   getPosition(id: string): Result<Position, PositionNotFound>
 }
 
+const fail = <E extends DomainError>(error: E): Result<never, E> => ({
+  success: false,
+  error,
+})
+
 export class LiquidLayer {
   constructor(private readonly provider: LiquidityProvider) {}
 
@@ -75,16 +80,10 @@ export class LiquidLayer {
     entryPrice: number,
   ): Result<Position, InsufficientMargin | InvalidSize | InvalidPrice> {
     if (size <= 0) {
-      return {
-        success: false,
-        error: { type: 'InvalidSize', size },
-      }
+      return fail({ type: 'InvalidSize', size })
     }
     if (entryPrice <= 0) {
-      return {
-        success: false,
-        error: { type: 'InvalidPrice', price: entryPrice },
-      }
+      return fail({ type: 'InvalidPrice', price: entryPrice })
     }
     const requiredMargin = this.provider.getRequiredMargin(
       side,
@@ -93,14 +92,11 @@ export class LiquidLayer {
     )
     const balance = this.provider.getCollateralBalance()
     if (balance < requiredMargin) {
-      return {
-        success: false,
-        error: {
-          type: 'InsufficientMargin',
-          required: requiredMargin,
-          available: balance,
-        },
-      }
+      return fail({
+        type: 'InsufficientMargin',
+        required: requiredMargin,
+        available: balance,
+      })
     }
     return {
       success: true,
@@ -116,10 +112,7 @@ export class LiquidLayer {
     PositionNotFound | InvalidPrice
   > {
     if (exitPrice <= 0) {
-      return {
-        success: false,
-        error: { type: 'InvalidPrice', price: exitPrice },
-      }
+      return fail({ type: 'InvalidPrice', price: exitPrice })
     }
     const found = this.provider.getPosition(id)
     if (!found.success) {
@@ -135,10 +128,7 @@ export class LiquidLayer {
 
   depositCollateral(amount: number): Result<number, InvalidAmount> {
     if (amount < 0) {
-      return {
-        success: false,
-        error: { type: 'InvalidAmount', amount },
-      }
+      return fail({ type: 'InvalidAmount', amount })
     }
     return { success: true, value: this.provider.depositCollateral(amount) }
   }
@@ -147,21 +137,15 @@ export class LiquidLayer {
     amount: number,
   ): Result<number, InsufficientBalance | InvalidAmount> {
     if (amount < 0) {
-      return {
-        success: false,
-        error: { type: 'InvalidAmount', amount },
-      }
+      return fail({ type: 'InvalidAmount', amount })
     }
     const balance = this.provider.getCollateralBalance()
     if (amount > balance) {
-      return {
-        success: false,
-        error: {
-          type: 'InsufficientBalance',
-          requested: amount,
-          available: balance,
-        },
-      }
+      return fail({
+        type: 'InsufficientBalance',
+        requested: amount,
+        available: balance,
+      })
     }
     return { success: true, value: this.provider.withdrawCollateral(amount) }
   }
