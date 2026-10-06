@@ -123,7 +123,10 @@ export class LiquidLayer {
     exitPrice: number,
   ): Result<
     { realizedPnl: number; position: Position },
-    PositionNotFound | InvalidPrice | PositionAlreadyClosed
+    | PositionNotFound
+    | InvalidPrice
+    | PositionAlreadyClosed
+    | InsufficientBalance
   > {
     if (exitPrice <= 0) {
       return fail({ type: 'InvalidPrice', price: exitPrice })
@@ -132,9 +135,32 @@ export class LiquidLayer {
     if (!found.success) {
       return found
     }
-    if (found.value.exitPrice !== undefined) {
+    const current = found.value
+    if (current.exitPrice !== undefined) {
       return fail({ type: 'PositionAlreadyClosed', id })
     }
+    const provisionalPnl = pnl(
+      current.side,
+      current.entryPrice,
+      exitPrice,
+      current.size,
+    )
+    const balance = this.provider.getCollateralBalance()
+    if (balance + provisionalPnl < 0) {
+      return fail({
+        type: 'InsufficientBalance',
+        requested: -provisionalPnl,
+        available: balance,
+      })
+    }
+    return { success: true, value: this.closeAndSettle(current, id, exitPrice) }
+  }
+
+  private closeAndSettle(
+    current: Position,
+    id: string,
+    exitPrice: number,
+  ): { realizedPnl: number; position: Position } {
     const position = this.provider.closePosition(id, exitPrice)
     const realizedPnl = pnl(
       position.side,
@@ -143,7 +169,7 @@ export class LiquidLayer {
       position.size,
     )
     this.provider.settlePnl(realizedPnl)
-    return { success: true, value: { realizedPnl, position } }
+    return { realizedPnl, position }
   }
 
   depositCollateral(amount: number): Result<number, InvalidAmount> {
@@ -204,11 +230,17 @@ export class LiquidLayer {
     { liquidated: boolean; exitPrice?: number; realizedPnl?: number },
     PositionNotFound | InvalidPrice | PositionAlreadyClosed
   > {
+    if (markPrice <= 0) {
+      return fail({ type: 'InvalidPrice', price: markPrice })
+    }
     const found = this.provider.getPosition(id)
     if (!found.success) {
       return found
     }
     const position = found.value
+    if (position.exitPrice !== undefined) {
+      return fail({ type: 'PositionAlreadyClosed', id })
+    }
     const maintenance = this.provider.getMaintenanceMargin(
       position.side,
       position.size,
@@ -217,17 +249,10 @@ export class LiquidLayer {
     if (this.equityOf(position, markPrice) >= maintenance) {
       return { success: true, value: { liquidated: false } }
     }
-    const closed = this.closePosition(id, markPrice)
-    if (!closed.success) {
-      return closed
-    }
+    const { realizedPnl } = this.closeAndSettle(position, id, markPrice)
     return {
       success: true,
-      value: {
-        liquidated: true,
-        exitPrice: markPrice,
-        realizedPnl: closed.value.realizedPnl,
-      },
+      value: { liquidated: true, exitPrice: markPrice, realizedPnl },
     }
   }
 
