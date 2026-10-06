@@ -76,4 +76,19 @@ export class AaveProvider {
     )
     return { success: true, value: (size * entryPrice) / threshold }
   }
+
+  async getFundingRate(
+    side: Side,
+    size: number,
+    entryPrice: number,
+  ): Promise<Result<number, UpstreamFailure>> {
+    const reserve = await this.reserve()
+    if (!reserve.success) {
+      return reserve
+    }
+    return {
+      success: true,
+      value: parseFloat(reserve.value.reserve!.borrowInfo!.apy.value),
+    }
+  }
 }

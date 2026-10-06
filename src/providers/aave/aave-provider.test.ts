@@ -89,4 +89,31 @@ describe('AaveProvider', () => {
       error: { type: 'UpstreamFailure', operation: 'postGraphQL' },
     })
   })
+
+  it('reads the funding rate from the reserve borrow apy', async () => {
+    const fetchFn = vi.fn(
+      async (
+        _input: string | URL | Request,
+        _init?: RequestInit,
+      ): Promise<Response> =>
+        new Response(JSON.stringify(reserveWethFixture), { status: 200 }),
+    )
+    const provider = new AaveProvider({
+      fetchFn,
+      market: MARKET,
+      underlyingToken: WETH,
+      chainId: '1',
+    })
+
+    const result = await provider.getFundingRate(Side.Long, 1, 60000)
+
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.value).toBeCloseTo(0.0198388, 6)
+    }
+    const [, init] = fetchFn.mock.calls[0]!
+    const body = JSON.parse(String(init?.body)) as { query: string }
+    expect(body.query).toContain('borrowInfo')
+    expect(body.query).toContain('apy { value }')
+  })
 })
