@@ -1,5 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
-import { LiquidLayer, Side, type Position } from './liquid-layer'
+import {
+  LiquidLayer,
+  Side,
+  type Position,
+  type PositionNotFoundError,
+  type Result,
+} from './liquid-layer'
 import { fakeProvider } from './test-support/fake-provider'
 import { fakeCollateralProvider } from './test-support/fake-collateral-provider'
 import { aPosition } from './test-support/position-builder'
@@ -18,11 +24,12 @@ describe('LiquidLayer', () => {
     const provider = fakeProvider({ openPosition })
     const layer = new LiquidLayer(provider)
 
-    const position = layer.openPosition(Side.Long, 1, 60000)
+    const result = layer.openPosition(Side.Long, 1, 60000)
 
-    expect(position).toEqual(
-      aPosition().id('pos-1').long().size(1).entryPrice(60000).build(),
-    )
+    expect(result).toEqual({
+      ok: true,
+      value: aPosition().id('pos-1').long().size(1).entryPrice(60000).build(),
+    })
     expect(openPosition).toHaveBeenCalledTimes(1)
     expect(openPosition).toHaveBeenCalledWith(Side.Long, 1, 60000)
   })
@@ -43,16 +50,19 @@ describe('LiquidLayer', () => {
 
     const result = layer.closePosition('pos-1', 61000)
 
-    expect(result.realizedPnl).toBe(1000)
-    expect(result.position).toEqual(
-      aPosition()
-        .id('pos-1')
-        .long()
-        .size(1)
-        .entryPrice(60000)
-        .exitPrice(61000)
-        .build(),
-    )
+    expect(result).toEqual({
+      ok: true,
+      value: {
+        realizedPnl: 1000,
+        position: aPosition()
+          .id('pos-1')
+          .long()
+          .size(1)
+          .entryPrice(60000)
+          .exitPrice(61000)
+          .build(),
+      },
+    })
     expect(closePosition).toHaveBeenCalledTimes(1)
     expect(closePosition).toHaveBeenCalledWith('pos-1', 61000)
   })
@@ -73,16 +83,19 @@ describe('LiquidLayer', () => {
 
     const result = layer.closePosition('pos-2', 59000)
 
-    expect(result.realizedPnl).toBe(1000)
-    expect(result.position).toEqual(
-      aPosition()
-        .id('pos-2')
-        .short()
-        .size(1)
-        .entryPrice(60000)
-        .exitPrice(59000)
-        .build(),
-    )
+    expect(result).toEqual({
+      ok: true,
+      value: {
+        realizedPnl: 1000,
+        position: aPosition()
+          .id('pos-2')
+          .short()
+          .size(1)
+          .entryPrice(60000)
+          .exitPrice(59000)
+          .build(),
+      },
+    })
     expect(closePosition).toHaveBeenCalledTimes(1)
     expect(closePosition).toHaveBeenCalledWith('pos-2', 59000)
   })
@@ -114,9 +127,10 @@ describe('LiquidLayer', () => {
     const { provider } = fakeCollateralProvider(500)
     const layer = new LiquidLayer(provider)
 
-    expect(() => layer.openPosition(Side.Long, 1, 60000)).toThrow(
-      'insufficient margin',
-    )
+    expect(layer.openPosition(Side.Long, 1, 60000)).toEqual({
+      ok: false,
+      error: { kind: 'insufficientMargin' },
+    })
     expect(provider.openPosition).not.toHaveBeenCalled()
   })
 
@@ -148,7 +162,19 @@ describe('LiquidLayer', () => {
 
     const result = layer.closePosition('pos-1', 61000)
 
-    expect(result.realizedPnl).toBe(1000)
+    expect(result).toEqual({
+      ok: true,
+      value: {
+        realizedPnl: 1000,
+        position: aPosition()
+          .id('pos-1')
+          .long()
+          .size(1)
+          .entryPrice(60000)
+          .exitPrice(61000)
+          .build(),
+      },
+    })
     expect(layer.getCollateralBalance()).toBe(6000)
     expect(settlePnl).toHaveBeenCalledTimes(1)
     expect(settlePnl).toHaveBeenCalledWith(1000)
@@ -156,25 +182,30 @@ describe('LiquidLayer', () => {
 
   it('a consumer queries an open position by id through the layer without knowing the protocol', () => {
     const getPosition = vi.fn(
-      (id: string): Position =>
-        aPosition().id(id).long().size(1).entryPrice(60000).build(),
+      (id: string): Result<Position, PositionNotFoundError> => ({
+        ok: true,
+        value: aPosition().id(id).long().size(1).entryPrice(60000).build(),
+      }),
     )
     const provider = fakeProvider({ getPosition })
     const layer = new LiquidLayer(provider)
 
-    const position = layer.getPosition('pos-1')
+    const result = layer.getPosition('pos-1')
 
-    expect(position).toEqual(
-      aPosition().id('pos-1').long().size(1).entryPrice(60000).build(),
-    )
+    expect(result).toEqual({
+      ok: true,
+      value: aPosition().id('pos-1').long().size(1).entryPrice(60000).build(),
+    })
     expect(getPosition).toHaveBeenCalledTimes(1)
     expect(getPosition).toHaveBeenCalledWith('pos-1')
   })
 
   it('charges funding on a long position and reduces the collateral balance', () => {
     const getPosition = vi.fn(
-      (id: string): Position =>
-        aPosition().id(id).long().size(1).entryPrice(60000).build(),
+      (id: string): Result<Position, PositionNotFoundError> => ({
+        ok: true,
+        value: aPosition().id(id).long().size(1).entryPrice(60000).build(),
+      }),
     )
     const { provider, settleFunding } = fakeCollateralProvider(5000, {
       getPosition,
@@ -182,8 +213,9 @@ describe('LiquidLayer', () => {
     })
     const layer = new LiquidLayer(provider)
 
-    layer.payFunding('pos-1')
+    const result = layer.payFunding('pos-1')
 
+    expect(result).toEqual({ ok: true, value: undefined })
     expect(settleFunding).toHaveBeenCalledTimes(1)
     expect(settleFunding).toHaveBeenCalledWith(-6)
     expect(layer.getCollateralBalance()).toBe(4994)
@@ -200,21 +232,30 @@ describe('LiquidLayer', () => {
           .exitPrice(exitPrice)
           .build(),
     )
-    const getPosition = vi.fn((id: string): Position => {
-      if (id !== 'pos-1') {
-        throw new Error('position not found')
-      }
-      return aPosition().id(id).long().size(1).entryPrice(60000).build()
-    })
+    const getPosition = vi.fn(
+      (id: string): Result<Position, PositionNotFoundError> =>
+        id === 'pos-1'
+          ? {
+              ok: true,
+              value: aPosition()
+                .id(id)
+                .long()
+                .size(1)
+                .entryPrice(60000)
+                .build(),
+            }
+          : { ok: false, error: { kind: 'positionNotFound', id } },
+    )
     const { provider } = fakeCollateralProvider(5000, {
       closePosition,
       getPosition,
     })
     const layer = new LiquidLayer(provider)
 
-    expect(() => layer.closePosition('pos-9', 1000)).toThrow(
-      'position not found',
-    )
+    expect(layer.closePosition('pos-9', 1000)).toEqual({
+      ok: false,
+      error: { kind: 'positionNotFound', id: 'pos-9' },
+    })
     expect(closePosition).not.toHaveBeenCalled()
   })
 })

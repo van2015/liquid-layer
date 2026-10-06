@@ -3,6 +3,14 @@ export enum Side {
   Short = 'short',
 }
 
+export type Result<T, E> =
+  | { ok: true; value: T }
+  | { ok: false; error: E }
+
+export type InsufficientMarginError = { kind: 'insufficientMargin' }
+
+export type PositionNotFoundError = { kind: 'positionNotFound'; id: string }
+
 export interface Position {
   id: string
   side: Side
@@ -21,13 +29,17 @@ export interface LiquidityProvider {
   getCollateralBalance(): number
   getRequiredMargin(side: Side, size: number, entryPrice: number): number
   getFundingRate(): number
-  getPosition(id: string): Position
+  getPosition(id: string): Result<Position, PositionNotFoundError>
 }
 
 export class LiquidLayer {
   constructor(private readonly provider: LiquidityProvider) {}
 
-  openPosition(side: Side, size: number, entryPrice: number): Position {
+  openPosition(
+    side: Side,
+    size: number,
+    entryPrice: number,
+  ): Result<Position, InsufficientMarginError> {
     const requiredMargin = this.provider.getRequiredMargin(
       side,
       size,
@@ -35,21 +47,28 @@ export class LiquidLayer {
     )
     const balance = this.provider.getCollateralBalance()
     if (balance < requiredMargin) {
-      throw new Error('insufficient margin')
+      return { ok: false, error: { kind: 'insufficientMargin' } }
     }
-    return this.provider.openPosition(side, size, entryPrice)
+    return {
+      ok: true,
+      value: this.provider.openPosition(side, size, entryPrice),
+    }
   }
 
   closePosition(
     id: string,
     exitPrice: number,
-  ): { realizedPnl: number; position: Position } {
-    this.provider.getPosition(id)
+  ): Result<{ realizedPnl: number; position: Position }, PositionNotFoundError> {
+    const found = this.provider.getPosition(id)
+    if (!found.ok) {
+      return found
+    }
     const position = this.provider.closePosition(id, exitPrice)
     const direction = position.side === Side.Long ? 1 : -1
-    const realizedPnl = (exitPrice - position.entryPrice) * position.size * direction
+    const realizedPnl =
+      (exitPrice - position.entryPrice) * position.size * direction
     this.provider.settlePnl(realizedPnl)
-    return { realizedPnl, position }
+    return { ok: true, value: { realizedPnl, position } }
   }
 
   depositCollateral(amount: number): number {
@@ -64,14 +83,18 @@ export class LiquidLayer {
     return this.provider.getCollateralBalance()
   }
 
-  getPosition(id: string): Position {
+  getPosition(id: string): Result<Position, PositionNotFoundError> {
     return this.provider.getPosition(id)
   }
 
-  payFunding(id: string): void {
-    const position = this.provider.getPosition(id)
-    const rate = this.provider.getFundingRate()
-    const amount = position.size * position.entryPrice * rate
+  payFunding(id: string): Result<void, PositionNotFoundError> {
+    const found = this.provider.getPosition(id)
+    if (!found.ok) {
+      return found
+    }
+    const { size, entryPrice } = found.value
+    const amount = size * entryPrice * this.provider.getFundingRate()
     this.provider.settleFunding(-amount)
+    return { ok: true, value: undefined }
   }
 }
