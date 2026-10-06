@@ -4,12 +4,14 @@ import {
   reserveWethFixture,
   reserveBorrowDisabledFixture,
   reserveNotFoundFixture,
+  reserveWithUserFixture,
 } from '../../test-support/aave-fixtures'
 import { AaveProvider } from './aave-provider'
 import { GRAPHQL_URL } from './types'
 
 const MARKET = '0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2'
 const WETH = '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2'
+const USER = '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045'
 
 describe('AaveProvider', () => {
   it('reads the required margin from the reserve max ltv', async () => {
@@ -25,6 +27,7 @@ describe('AaveProvider', () => {
       market: MARKET,
       underlyingToken: WETH,
       chainId: '1',
+      user: USER,
     })
 
     const result = await provider.getRequiredMargin(Side.Long, 2, 40250)
@@ -61,6 +64,7 @@ describe('AaveProvider', () => {
       market: MARKET,
       underlyingToken: WETH,
       chainId: '1',
+      user: USER,
     })
 
     const result = await provider.getMaintenanceMargin(Side.Long, 1, 83000)
@@ -84,6 +88,7 @@ describe('AaveProvider', () => {
       market: MARKET,
       underlyingToken: WETH,
       chainId: '1',
+      user: USER,
     })
 
     const result = await provider.getRequiredMargin(Side.Long, 1, 60000)
@@ -107,6 +112,7 @@ describe('AaveProvider', () => {
       market: MARKET,
       underlyingToken: WETH,
       chainId: '1',
+      user: USER,
     })
 
     const result = await provider.getFundingRate(Side.Long, 1, 60000)
@@ -133,6 +139,7 @@ describe('AaveProvider', () => {
       market: MARKET,
       underlyingToken: WETH,
       chainId: '1',
+      user: USER,
     })
 
     const result = await provider.getFundingRate(Side.Long, 1, 60000)
@@ -153,6 +160,7 @@ describe('AaveProvider', () => {
       market: MARKET,
       underlyingToken: WETH,
       chainId: '1',
+      user: USER,
     })
 
     const result = await provider.getRequiredMargin(Side.Long, 1, 60000)
@@ -161,5 +169,36 @@ describe('AaveProvider', () => {
       success: false,
       error: { type: 'UpstreamFailure', operation: 'postGraphQL' },
     })
+  })
+
+  it('reads the collateral balance from the reserve user state', async () => {
+    const fetchFn = vi.fn(
+      async (
+        _input: string | URL | Request,
+        _init?: RequestInit,
+      ): Promise<Response> =>
+        new Response(JSON.stringify(reserveWithUserFixture), { status: 200 }),
+    )
+    const provider = new AaveProvider({
+      fetchFn,
+      market: MARKET,
+      underlyingToken: WETH,
+      chainId: '1',
+      user: USER,
+    })
+
+    const result = await provider.getCollateralBalance()
+
+    expect(result.success).toBe(true)
+    if (result.success) {
+      expect(result.value).toBeCloseTo(1.465109424750435891, 9)
+    }
+    const [, init] = fetchFn.mock.calls[0]!
+    const body = JSON.parse(String(init?.body)) as {
+      query: string
+      variables: Record<string, string>
+    }
+    expect(body.query).toContain('userState')
+    expect(body.variables.user).toBe(USER)
   })
 })

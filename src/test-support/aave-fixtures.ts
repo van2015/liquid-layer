@@ -31,3 +31,17 @@ export const reserveNotFoundFixture = {
     reserve: null,
   },
 } as const
+
+export const reserveWithUserFixture = {
+  data: {
+    reserve: {
+      userState: {
+        balance: {
+          amount: {
+            value: '1.465109424750435891',
+          },
+        },
+      },
+    },
+  },
+} as const

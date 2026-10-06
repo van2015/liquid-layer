@@ -28,11 +28,30 @@ type ReserveData = {
   borrowInfo: { apy: { value: string } } | null
 }
 
+const RESERVE_USER_QUERY = `query ReserveWithUser($market: EvmAddress!, $underlyingToken: EvmAddress!, $chainId: ChainId!, $user: EvmAddress!) {
+  reserve(request: {market: $market, underlyingToken: $underlyingToken, chainId: $chainId, user: $user}) {
+    userState {
+      balance {
+        amount { value }
+      }
+    }
+  }
+}`
+
+interface ReserveUserResponse {
+  reserve: {
+    userState: {
+      balance: { amount: { value: string } }
+    } | null
+  } | null
+}
+
 export interface AaveProviderConfig {
   fetchFn: FetchLike
   market: string
   underlyingToken: string
   chainId: string
+  user: string
 }
 
 export class AaveProvider {
@@ -104,5 +123,24 @@ export class AaveProvider {
       }
     }
     return { success: true, value: parseFloat(borrowInfo.apy.value) }
+  }
+
+  async getCollateralBalance(): Promise<Result<number, UpstreamFailure>> {
+    const response = await postGraphQL<ReserveUserResponse>(
+      this.config.fetchFn,
+      GRAPHQL_URL,
+      RESERVE_USER_QUERY,
+      {
+        market: this.config.market,
+        underlyingToken: this.config.underlyingToken,
+        chainId: this.config.chainId,
+        user: this.config.user,
+      },
+    )
+    if (!response.success) {
+      return response
+    }
+    const balance = response.value.reserve!.userState!.balance.amount.value
+    return { success: true, value: parseFloat(balance) }
   }
 }
