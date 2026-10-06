@@ -188,4 +188,33 @@ describe('LiquidLayer', () => {
     expect(settleFunding).toHaveBeenCalledWith(-6)
     expect(layer.getCollateralBalance()).toBe(4994)
   })
+
+  it('rejects closing a position that does not exist', () => {
+    const closePosition = vi.fn(
+      (id: string, exitPrice: number): Position =>
+        aPosition()
+          .id(id)
+          .long()
+          .size(1)
+          .entryPrice(60000)
+          .exitPrice(exitPrice)
+          .build(),
+    )
+    const getPosition = vi.fn((id: string): Position => {
+      if (id !== 'pos-1') {
+        throw new Error('position not found')
+      }
+      return aPosition().id(id).long().size(1).entryPrice(60000).build()
+    })
+    const { provider } = fakeCollateralProvider(5000, {
+      closePosition,
+      getPosition,
+    })
+    const layer = new LiquidLayer(provider)
+
+    expect(() => layer.closePosition('pos-9', 1000)).toThrow(
+      'position not found',
+    )
+    expect(closePosition).not.toHaveBeenCalled()
+  })
 })

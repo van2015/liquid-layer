@@ -44,6 +44,7 @@ export class LiquidLayer {
     id: string,
     exitPrice: number,
   ): { realizedPnl: number; position: Position } {
+    this.provider.getPosition(id)
     const position = this.provider.closePosition(id, exitPrice)
     const direction = position.side === Side.Long ? 1 : -1
     const realizedPnl = (exitPrice - position.entryPrice) * position.size * direction
