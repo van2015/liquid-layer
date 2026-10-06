@@ -45,5 +45,8 @@ export async function postGraphQL<T>(
   if (hasGraphQLErrors(body)) {
     return { success: false, error: graphQLFailure() }
   }
+  if (typeof body !== 'object' || body === null || !('data' in body)) {
+    return { success: false, error: graphQLFailure() }
+  }
   return { success: true, value: (body as { data: T }).data }
 }

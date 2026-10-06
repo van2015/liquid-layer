@@ -100,4 +100,21 @@ describe('postGraphQL', () => {
       error: { type: 'UpstreamFailure', operation: 'postGraphQL' },
     })
   })
+
+  it('returns an upstream failure when the response has no data field', async () => {
+    const fetchFn = vi.fn(
+      async (): Promise<Response> =>
+        new Response(JSON.stringify({ ok: true }), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
+    )
+
+    const result = await postGraphQL(fetchFn, GRAPHQL_URL, 'query { x }', {})
+
+    expect(result).toEqual({
+      success: false,
+      error: { type: 'UpstreamFailure', operation: 'postGraphQL' },
+    })
+  })
 })
