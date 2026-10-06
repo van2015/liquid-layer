@@ -267,6 +267,26 @@ describe('LiquidLayer', () => {
     expect(getPosition).toHaveBeenCalledWith('pos-1')
   })
 
+  it('a consumer lists open positions through the layer without knowing the protocol', () => {
+    const listPositions = vi.fn(
+      (): Position[] => [
+        aPosition().id('pos-1').long().size(1).entryPrice(60000).build(),
+        aPosition().id('pos-2').short().size(1).entryPrice(60000).build(),
+      ],
+    )
+    const provider = fakeProvider({ listPositions })
+    const layer = new LiquidLayer(provider)
+
+    const positions = layer.listPositions()
+
+    expect(positions).toEqual([
+      aPosition().id('pos-1').long().size(1).entryPrice(60000).build(),
+      aPosition().id('pos-2').short().size(1).entryPrice(60000).build(),
+    ])
+    expect(listPositions).toHaveBeenCalledTimes(1)
+    expect(listPositions).toHaveBeenCalledWith()
+  })
+
   it('charges funding on a long position and reduces the collateral balance', () => {
     const getPosition = vi.fn(
       (id: string): Result<Position, PositionNotFound> => ({

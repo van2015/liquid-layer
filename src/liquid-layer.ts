@@ -64,6 +64,7 @@ export interface LiquidityProvider {
   getRequiredMargin(side: Side, size: number, entryPrice: number): number
   getFundingRate(): number
   getPosition(id: string): Result<Position, PositionNotFound>
+  listPositions(): Position[]
 }
 
 const fail = <E extends DomainError>(error: E): Result<never, E> => ({
@@ -156,6 +157,10 @@ export class LiquidLayer {
 
   getPosition(id: string): Result<Position, PositionNotFound> {
     return this.provider.getPosition(id)
+  }
+
+  listPositions(): Position[] {
+    return this.provider.listPositions()
   }
 
   payFunding(id: string): Result<void, PositionNotFound> {
