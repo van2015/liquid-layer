@@ -178,6 +178,17 @@ describe('LiquidLayer', () => {
     expect(provider.openPosition).not.toHaveBeenCalled()
   })
 
+  it('rejects opening a position with a non-positive entry price', () => {
+    const { provider } = fakeCollateralProvider(5000)
+    const layer = new LiquidLayer(provider)
+
+    expect(layer.openPosition(Side.Long, 1, 0)).toEqual({
+      success: false,
+      error: { type: 'InvalidPrice', price: 0 },
+    })
+    expect(provider.openPosition).not.toHaveBeenCalled()
+  })
+
   it('a consumer checks the collateral balance through the layer without knowing the protocol', () => {
     const { provider, getCollateralBalance } = fakeCollateralProvider(1000)
     const layer = new LiquidLayer(provider)
