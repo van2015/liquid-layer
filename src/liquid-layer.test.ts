@@ -312,6 +312,35 @@ describe('LiquidLayer', () => {
     expect(settleFunding).not.toHaveBeenCalled()
   })
 
+  it('liquidates a position when equity falls below the maintenance margin', () => {
+    const closePosition = vi.fn((id: string, exitPrice: number) => ({
+      ...aPosition().id(id).long().size(1).entryPrice(60000).build(),
+      exitPrice,
+    }))
+    const { provider, settlePnl, getCollateralBalance } =
+      fakeCollateralProvider(6000, {
+        getPosition: vi.fn(() => ({
+          success: true as const,
+          value: aPosition()
+            .id('pos-1')
+            .long()
+            .size(1)
+            .entryPrice(60000)
+            .build(),
+        })),
+        closePosition,
+      })
+    const layer = new LiquidLayer(provider)
+
+    expect(layer.checkLiquidation('pos-1', 55000)).toEqual({
+      success: true,
+      value: { liquidated: true, exitPrice: 55000, realizedPnl: -5000 },
+    })
+    expect(closePosition).toHaveBeenCalledWith('pos-1', 55000)
+    expect(settlePnl).toHaveBeenCalledWith(-5000)
+    expect(getCollateralBalance()).toBe(1000)
+  })
+
   it('charges funding on a long position and reduces the collateral balance', () => {
     const getPosition = vi.fn(
       (id: string): Result<Position, PositionNotFound> => ({

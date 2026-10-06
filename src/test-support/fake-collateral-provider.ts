@@ -38,6 +38,8 @@ export function fakeCollateralProvider(
     settleFunding,
     getRequiredMargin: (_side: Side, size: number, entryPrice: number) =>
       size * entryPrice * 0.1,
+    getMaintenanceMargin: (_side: Side, size: number, entryPrice: number) =>
+      size * entryPrice * 0.05,
     ...overrides,
   })
 

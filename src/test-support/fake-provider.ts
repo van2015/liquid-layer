@@ -13,6 +13,7 @@ export function fakeProvider(
     settleFunding: vi.fn(),
     getCollateralBalance: vi.fn(() => 10000),
     getRequiredMargin: vi.fn(() => 0),
+    getMaintenanceMargin: vi.fn(() => 0),
     getFundingRate: vi.fn(() => 0),
     getPosition: vi.fn((id: string) => ({
       success: true as const,
