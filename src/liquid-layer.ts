@@ -55,6 +55,12 @@ export type Result<T, E extends DomainError> =
   | { success: true; value: T }
   | { success: false; error: E }
 
+export type TransactionRequest = {
+  to: string
+  data: string
+  value: string
+}
+
 export interface Position {
   id: string
   side: Side
@@ -66,8 +72,17 @@ export interface Position {
 export interface LiquidityProvider {
   openPosition(side: Side, size: number, entryPrice: number): Promise<Position>
   closePosition(id: string, exitPrice: number): Promise<Position>
-  depositCollateral(amount: number): Promise<number>
-  withdrawCollateral(amount: number): Promise<number>
+  depositCollateral(
+    amount: number,
+  ): Promise<Result<TransactionRequest, InvalidAmount | UpstreamFailure>>
+  withdrawCollateral(
+    amount: number,
+  ): Promise<
+    Result<
+      TransactionRequest,
+      InsufficientBalance | InvalidAmount | UpstreamFailure
+    >
+  >
   settlePnl(amount: number): Promise<number>
   settleFunding(amount: number): Promise<number>
   getCollateralBalance(): Promise<Result<Money, UpstreamFailure>>
@@ -234,20 +249,22 @@ export class LiquidLayer {
     return this.ensureOpen(id)
   }
 
-  async depositCollateral(amount: number): Promise<Result<number, InvalidAmount>> {
+  async depositCollateral(
+    amount: number,
+  ): Promise<Result<TransactionRequest, InvalidAmount | UpstreamFailure>> {
     if (amount < 0) {
       return fail({ type: 'InvalidAmount', amount })
     }
-    return {
-      success: true,
-      value: await this.provider.depositCollateral(amount),
-    }
+    return this.provider.depositCollateral(amount)
   }
 
   async withdrawCollateral(
     amount: number,
   ): Promise<
-    Result<number, InsufficientBalance | InvalidAmount | UpstreamFailure>
+    Result<
+      TransactionRequest,
+      InsufficientBalance | InvalidAmount | UpstreamFailure
+    >
   > {
     if (amount < 0) {
       return fail({ type: 'InvalidAmount', amount })
@@ -263,10 +280,7 @@ export class LiquidLayer {
         available: balance.value,
       })
     }
-    return {
-      success: true,
-      value: await this.provider.withdrawCollateral(amount),
-    }
+    return this.provider.withdrawCollateral(amount)
   }
 
   async getCollateralBalance(): Promise<Result<Money, UpstreamFailure>> {

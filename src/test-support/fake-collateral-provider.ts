@@ -3,9 +3,16 @@ import {
   Side,
   type LiquidityProvider,
   type Result,
+  type TransactionRequest,
   type UpstreamFailure,
 } from '../liquid-layer'
 import { fakeProvider } from './fake-provider'
+
+export const preparedTx: TransactionRequest = {
+  to: '0x000000000000000000000000000000000000dead',
+  data: '0x',
+  value: '0',
+}
 
 export function fakeCollateralProvider(
   initialBalance = 0,
@@ -13,15 +20,19 @@ export function fakeCollateralProvider(
 ) {
   let balance = initialBalance
 
-  const depositCollateral = vi.fn(async (amount: number): Promise<number> => {
-    balance += amount
-    return balance
-  })
+  const depositCollateral = vi.fn(
+    async (amount: number): Promise<Result<TransactionRequest, never>> => {
+      balance += amount
+      return { success: true, value: preparedTx }
+    },
+  )
 
-  const withdrawCollateral = vi.fn(async (amount: number): Promise<number> => {
-    balance -= amount
-    return balance
-  })
+  const withdrawCollateral = vi.fn(
+    async (amount: number): Promise<Result<TransactionRequest, never>> => {
+      balance -= amount
+      return { success: true, value: preparedTx }
+    },
+  )
 
   const settlePnl = vi.fn(async (amount: number): Promise<number> => {
     balance += amount

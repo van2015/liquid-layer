@@ -8,7 +8,10 @@ import {
   type UpstreamFailure,
 } from './liquid-layer'
 import { fakeProvider } from './test-support/fake-provider'
-import { fakeCollateralProvider } from './test-support/fake-collateral-provider'
+import {
+  fakeCollateralProvider,
+  preparedTx,
+} from './test-support/fake-collateral-provider'
 import { aPosition } from './test-support/position-builder'
 
 describe('LiquidLayer', async () => {
@@ -111,9 +114,13 @@ describe('LiquidLayer', async () => {
 
     const result = await layer.depositCollateral(1000)
 
-    expect(result).toEqual({ success: true, value: 1000 })
+    expect(result).toEqual({ success: true, value: preparedTx })
     expect(depositCollateral).toHaveBeenCalledTimes(1)
     expect(depositCollateral).toHaveBeenCalledWith(1000)
+    expect(await layer.getCollateralBalance()).toEqual({
+      success: true,
+      value: 1000,
+    })
   })
 
   it('rejects depositing a negative amount', async () => {
@@ -134,9 +141,13 @@ describe('LiquidLayer', async () => {
     await layer.depositCollateral(1000)
     const result = await layer.withdrawCollateral(400)
 
-    expect(result).toEqual({ success: true, value: 600 })
+    expect(result).toEqual({ success: true, value: preparedTx })
     expect(withdrawCollateral).toHaveBeenCalledTimes(1)
     expect(withdrawCollateral).toHaveBeenCalledWith(400)
+    expect(await layer.getCollateralBalance()).toEqual({
+      success: true,
+      value: 600,
+    })
   })
 
   it('rejects withdrawing more collateral than the available balance', async () => {
