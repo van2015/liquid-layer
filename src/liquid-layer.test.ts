@@ -5,6 +5,7 @@ import {
   type Position,
   type PositionNotFound,
   type Result,
+  type UpstreamFailure,
 } from './liquid-layer'
 import { fakeProvider } from './test-support/fake-provider'
 import { fakeCollateralProvider } from './test-support/fake-collateral-provider'
@@ -269,20 +270,24 @@ describe('LiquidLayer', () => {
 
   it('a consumer lists open positions through the layer without knowing the protocol', () => {
     const listPositions = vi.fn(
-      (): Position[] => [
-        aPosition().id('pos-1').long().size(1).entryPrice(60000).build(),
-        aPosition().id('pos-2').short().size(1).entryPrice(60000).build(),
-      ],
+      (): Result<Position[], UpstreamFailure> => ({
+        success: true,
+        value: [
+          aPosition().id('pos-1').long().size(1).entryPrice(60000).build(),
+          aPosition().id('pos-2').short().size(1).entryPrice(60000).build(),
+        ],
+      }),
     )
     const provider = fakeProvider({ listPositions })
     const layer = new LiquidLayer(provider)
 
-    const positions = layer.listPositions()
-
-    expect(positions).toEqual([
-      aPosition().id('pos-1').long().size(1).entryPrice(60000).build(),
-      aPosition().id('pos-2').short().size(1).entryPrice(60000).build(),
-    ])
+    expect(layer.listPositions()).toEqual({
+      success: true,
+      value: [
+        aPosition().id('pos-1').long().size(1).entryPrice(60000).build(),
+        aPosition().id('pos-2').short().size(1).entryPrice(60000).build(),
+      ],
+    })
     expect(listPositions).toHaveBeenCalledTimes(1)
     expect(listPositions).toHaveBeenCalledWith()
   })
@@ -432,20 +437,29 @@ describe('LiquidLayer', () => {
 
   it('lists only open positions, hiding already closed ones', () => {
     const listPositions = vi.fn(
-      (): Position[] => [
-        aPosition().id('pos-1').long().size(1).entryPrice(60000).build(),
-        {
-          ...aPosition().id('pos-2').short().size(1).entryPrice(60000).build(),
-          exitPrice: 55000,
-        },
-      ],
+      (): Result<Position[], UpstreamFailure> => ({
+        success: true,
+        value: [
+          aPosition().id('pos-1').long().size(1).entryPrice(60000).build(),
+          {
+            ...aPosition()
+              .id('pos-2')
+              .short()
+              .size(1)
+              .entryPrice(60000)
+              .build(),
+            exitPrice: 55000,
+          },
+        ],
+      }),
     )
     const provider = fakeProvider({ listPositions })
     const layer = new LiquidLayer(provider)
 
-    expect(layer.listPositions()).toEqual([
-      aPosition().id('pos-1').long().size(1).entryPrice(60000).build(),
-    ])
+    expect(layer.listPositions()).toEqual({
+      success: true,
+      value: [aPosition().id('pos-1').long().size(1).entryPrice(60000).build()],
+    })
   })
 
   it('charges funding on a long position and reduces the collateral balance', () => {
@@ -577,5 +591,19 @@ describe('LiquidLayer', () => {
       error: { type: 'UpstreamFailure', operation: 'getFundingRate' },
     })
     expect(provider.settleFunding).not.toHaveBeenCalled()
+  })
+
+  it('propagates an upstream failure when a position cannot be read', () => {
+    const listPositions = vi.fn(() => ({
+      success: false as const,
+      error: { type: 'UpstreamFailure' as const, operation: 'listPositions' },
+    }))
+    const provider = fakeProvider({ listPositions })
+    const layer = new LiquidLayer(provider)
+
+    expect(layer.listPositions()).toEqual({
+      success: false,
+      error: { type: 'UpstreamFailure', operation: 'listPositions' },
+    })
   })
 })

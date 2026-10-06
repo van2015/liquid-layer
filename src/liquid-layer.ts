@@ -82,8 +82,10 @@ export interface LiquidityProvider {
     entryPrice: number,
   ): Result<Money, UpstreamFailure>
   getFundingRate(): Result<number, UpstreamFailure>
-  getPosition(id: string): Result<Position, PositionNotFound>
-  listPositions(): Position[]
+  getPosition(
+    id: string,
+  ): Result<Position, PositionNotFound | UpstreamFailure>
+  listPositions(): Result<Position[], UpstreamFailure>
 }
 
 const fail = <E extends DomainError>(error: E): Result<never, E> => ({
@@ -194,7 +196,10 @@ export class LiquidLayer {
 
   private ensureOpen(
     id: string,
-  ): Result<Position, PositionNotFound | PositionAlreadyClosed> {
+  ): Result<
+    Position,
+    PositionNotFound | PositionAlreadyClosed | UpstreamFailure
+  > {
     const found = this.provider.getPosition(id)
     if (!found.success) {
       return found
@@ -210,7 +215,7 @@ export class LiquidLayer {
     price: number,
   ): Result<
     Position,
-    InvalidPrice | PositionNotFound | PositionAlreadyClosed
+    InvalidPrice | PositionNotFound | PositionAlreadyClosed | UpstreamFailure
   > {
     if (price <= 0) {
       return fail({ type: 'InvalidPrice', price })
@@ -249,14 +254,21 @@ export class LiquidLayer {
     return this.provider.getCollateralBalance()
   }
 
-  getPosition(id: string): Result<Position, PositionNotFound> {
+  getPosition(
+    id: string,
+  ): Result<Position, PositionNotFound | UpstreamFailure> {
     return this.provider.getPosition(id)
   }
 
-  listPositions(): Position[] {
-    return this.provider
-      .listPositions()
-      .filter((position) => position.exitPrice === undefined)
+  listPositions(): Result<Position[], UpstreamFailure> {
+    const listed = this.provider.listPositions()
+    if (!listed.success) {
+      return listed
+    }
+    return {
+      success: true,
+      value: listed.value.filter((position) => position.exitPrice === undefined),
+    }
   }
 
   getEquity(
