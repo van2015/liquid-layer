@@ -390,4 +390,22 @@ describe('AaveProvider', () => {
       expect(position.exitPrice).toBeUndefined()
     }
   })
+
+  it('lists an empty list when the user has no position', async () => {
+    const fetchFn = vi.fn(
+      async (): Promise<Response> =>
+        new Response(JSON.stringify(userNoPositionFixture), { status: 200 }),
+    )
+    const provider = new AaveProvider({
+      fetchFn,
+      market: MARKET,
+      underlyingToken: WETH,
+      chainId: '1',
+      user: USER,
+    })
+
+    const result = await provider.listPositions()
+
+    expect(result).toEqual({ success: true, value: [] })
+  })
 })
