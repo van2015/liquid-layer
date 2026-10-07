@@ -72,7 +72,15 @@ export interface AaveProviderConfig {
 }
 
 export class AaveProvider {
-  constructor(private readonly config: AaveProviderConfig) {}
+  private readonly underlyingTokenKey: string
+
+  constructor(private readonly config: AaveProviderConfig) {
+    this.underlyingTokenKey = config.underlyingToken.toLowerCase()
+  }
+
+  private matchesUnderlyingToken(address: string): boolean {
+    return address.toLowerCase() === this.underlyingTokenKey
+  }
 
   private async reserve(): Promise<Result<ReserveData, UpstreamFailure>> {
     const response = await postGraphQL<ReserveResponse>(
@@ -151,8 +159,8 @@ export class AaveProvider {
     }
     const supply = positions.value.supplies.find(
       (entry) =>
-        entry.currency.address.toLowerCase() ===
-          this.config.underlyingToken.toLowerCase() && entry.isCollateral,
+        this.matchesUnderlyingToken(entry.currency.address) &&
+        entry.isCollateral,
     )
     if (supply === undefined) {
       return { success: true, value: 0 }
@@ -199,10 +207,8 @@ export class AaveProvider {
     if (!positions.success) {
       return positions
     }
-    const borrow = positions.value.borrows.find(
-      (entry) =>
-        entry.currency.address.toLowerCase() ===
-        this.config.underlyingToken.toLowerCase(),
+    const borrow = positions.value.borrows.find((entry) =>
+      this.matchesUnderlyingToken(entry.currency.address),
     )
     if (borrow !== undefined) {
       const size = parseFloat(borrow.debt.amount.value)
@@ -217,10 +223,8 @@ export class AaveProvider {
         },
       }
     }
-    const supply = positions.value.supplies.find(
-      (entry) =>
-        entry.currency.address.toLowerCase() ===
-        this.config.underlyingToken.toLowerCase(),
+    const supply = positions.value.supplies.find((entry) =>
+      this.matchesUnderlyingToken(entry.currency.address),
     )
     if (supply !== undefined) {
       return {
