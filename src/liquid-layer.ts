@@ -352,6 +352,25 @@ export class LiquidLayer {
     }
   }
 
+  private async marginCovered(
+    position: Position,
+    markPrice: number,
+  ): Promise<Result<boolean, UpstreamFailure>> {
+    const maintenance = await this.provider.getMaintenanceMargin({
+      side: position.side,
+      size: position.size,
+      entryPrice: position.entryPrice,
+    })
+    if (!maintenance.success) {
+      return maintenance
+    }
+    const equity = await this.equityOf(position, markPrice)
+    if (!equity.success) {
+      return equity
+    }
+    return { success: true, value: equity.value >= maintenance.value }
+  }
+
   async checkLiquidation(
     id: string,
     markPrice: number,
@@ -371,19 +390,11 @@ export class LiquidLayer {
       return open
     }
     const position = open.value
-    const maintenance = await this.provider.getMaintenanceMargin({
-      side: position.side,
-      size: position.size,
-      entryPrice: position.entryPrice,
-    })
-    if (!maintenance.success) {
-      return maintenance
+    const covered = await this.marginCovered(position, markPrice)
+    if (!covered.success) {
+      return covered
     }
-    const equity = await this.equityOf(position, markPrice)
-    if (!equity.success) {
-      return equity
-    }
-    if (equity.value >= maintenance.value) {
+    if (covered.value) {
       return { success: true, value: { liquidated: false } }
     }
     const settled = await this.closeAndSettle(position, id, markPrice)
