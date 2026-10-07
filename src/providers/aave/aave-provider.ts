@@ -283,6 +283,20 @@ export class AaveProvider {
     if (amount < 0) {
       return this.invalidAmount(amount)
     }
+    const balance = await this.getCollateralBalance()
+    if (!balance.success) {
+      return balance
+    }
+    if (amount > balance.value) {
+      return {
+        success: false,
+        error: {
+          type: 'InsufficientBalance',
+          requested: amount,
+          available: balance.value,
+        },
+      }
+    }
     return this.withdraw(amount)
   }
 

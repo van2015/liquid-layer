@@ -87,6 +87,27 @@ export const userNoPositionFixture = {
   },
 } as const
 
+export const userWethCollateralFixture = {
+  data: {
+    borrows: [],
+    supplies: [
+      {
+        currency: {
+          address: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
+          symbol: 'WETH',
+          decimals: 18,
+        },
+        balance: {
+          amount: { value: '100' },
+          usd: '270000',
+          usdPerToken: '2700',
+        },
+        isCollateral: true,
+      },
+    ],
+  },
+} as const
+
 export const userPositionsWithWethDebtFixture = {
   data: {
     borrows: [

@@ -6,6 +6,7 @@ import {
   reserveNotFoundFixture,
   userPositionsWithSupplyFixture,
   userNoPositionFixture,
+  userWethCollateralFixture,
   userPositionsWithWethDebtFixture,
   userPositionsWithWethSupplyFixture,
   supplyTxFixture,
@@ -39,6 +40,17 @@ function respondingWith(fixture: unknown) {
       _init?: RequestInit,
     ): Promise<Response> =>
       new Response(JSON.stringify(fixture), { status: 200 }),
+  )
+}
+
+function respondingInSequence(...fixtures: unknown[]) {
+  let index = 0
+  return vi.fn(
+    async (
+      _input: string | URL | Request,
+      _init?: RequestInit,
+    ): Promise<Response> =>
+      new Response(JSON.stringify(fixtures[index++]), { status: 200 }),
   )
 }
 
@@ -235,7 +247,10 @@ describe('AaveProvider', () => {
   })
 
   it('prepares a withdraw transaction when withdrawing collateral', async () => {
-    const fetchFn = respondingWith(withdrawTxFixture)
+    const fetchFn = respondingInSequence(
+      userWethCollateralFixture,
+      withdrawTxFixture,
+    )
     const provider = aProvider(fetchFn)
 
     const result = await provider.withdrawCollateral(2)
@@ -248,8 +263,9 @@ describe('AaveProvider', () => {
         value: '0',
       },
     })
-    expect(fetchFn).toHaveBeenCalledTimes(1)
-    const [url, init] = fetchFn.mock.calls[0]!
+    expect(fetchFn).toHaveBeenCalledTimes(2)
+    const [, mutationCall] = fetchFn.mock.calls
+    const [url, init] = mutationCall!
     expect(url).toBe(GRAPHQL_URL)
     const body = JSON.parse(String(init?.body)) as {
       query: string
@@ -279,6 +295,19 @@ describe('AaveProvider', () => {
       error: { type: 'InvalidAmount', amount: -2 },
     })
     expect(fetchFn).not.toHaveBeenCalled()
+  })
+
+  it('rejects withdrawing more than the available collateral balance', async () => {
+    const fetchFn = respondingWith(userWethCollateralFixture)
+    const provider = aProvider(fetchFn)
+
+    const result = await provider.withdrawCollateral(250)
+
+    expect(result).toEqual({
+      success: false,
+      error: { type: 'InsufficientBalance', requested: 250, available: 100 },
+    })
+    expect(fetchFn).toHaveBeenCalledTimes(1)
   })
 
   it('reads a long position from the user borrow of the reserve', async () => {
