@@ -1,5 +1,6 @@
 import {
   Side,
+  type InsufficientBalance,
   type InvalidAmount,
   type Position,
   type PositionNotFound,
@@ -18,10 +19,12 @@ import {
   RESERVE_QUERY,
   SUPPLY_MUTATION,
   USER_POSITIONS_QUERY,
+  WITHDRAW_MUTATION,
   type ReserveData,
   type ReserveResponse,
   type SupplyResponse,
   type UserPositionsResponse,
+  type WithdrawResponse,
 } from './queries'
 
 export interface AaveProviderConfig {
@@ -244,6 +247,38 @@ export class AaveProvider {
       return { success: false, error: { type: 'InvalidAmount', amount } }
     }
     return this.supply(amount)
+  }
+
+  private async withdraw(
+    amount: number,
+  ): Promise<Result<TransactionRequest, UpstreamFailure>> {
+    const response = await postGraphQL<WithdrawResponse>(
+      this.config.fetchFn,
+      GRAPHQL_URL,
+      WITHDRAW_MUTATION,
+      {
+        market: this.config.market,
+        underlyingToken: this.config.underlyingToken,
+        chainId: this.config.chainId,
+        user: this.config.user,
+        amount: String(amount),
+      },
+    )
+    if (!response.success) {
+      return response
+    }
+    return { success: true, value: response.value.withdraw }
+  }
+
+  async withdrawCollateral(
+    amount: number,
+  ): Promise<
+    Result<
+      TransactionRequest,
+      InsufficientBalance | InvalidAmount | UpstreamFailure
+    >
+  > {
+    return this.withdraw(amount)
   }
 
   async settlePnl(_amount: number): Promise<Result<void, UpstreamFailure>> {

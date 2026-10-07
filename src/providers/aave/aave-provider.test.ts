@@ -10,6 +10,7 @@ import {
   userPositionsWithWethSupplyFixture,
   supplyTxFixture,
   supplyMissingTxFixture,
+  withdrawTxFixture,
   postGraphQLFailureResult,
 } from '../../test-support/aave-fixtures'
 import { aTrade } from '../../test-support/trade-builder'
@@ -231,6 +232,38 @@ describe('AaveProvider', () => {
       error: { type: 'InvalidAmount', amount: -1 },
     })
     expect(fetchFn).not.toHaveBeenCalled()
+  })
+
+  it('prepares a withdraw transaction when withdrawing collateral', async () => {
+    const fetchFn = respondingWith(withdrawTxFixture)
+    const provider = aProvider(fetchFn)
+
+    const result = await provider.withdrawCollateral(2)
+
+    expect(result).toEqual({
+      success: true,
+      value: {
+        to: '0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2',
+        data: '0x853828b60000000000000000000000000000000000000000000000000000000000000002',
+        value: '0',
+      },
+    })
+    expect(fetchFn).toHaveBeenCalledTimes(1)
+    const [url, init] = fetchFn.mock.calls[0]!
+    expect(url).toBe(GRAPHQL_URL)
+    const body = JSON.parse(String(init?.body)) as {
+      query: string
+      variables: Record<string, string>
+    }
+    expect(body.query).toContain('mutation')
+    expect(body.query).toContain('withdraw(request:')
+    expect(body.variables).toEqual({
+      market: MARKET,
+      underlyingToken: WETH,
+      chainId: '1',
+      user: USER,
+      amount: '2',
+    })
   })
 
   it('reads a long position from the user borrow of the reserve', async () => {

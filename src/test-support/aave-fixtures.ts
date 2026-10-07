@@ -70,6 +70,16 @@ export const supplyMissingTxFixture = {
   },
 } as const
 
+export const withdrawTxFixture = {
+  data: {
+    withdraw: {
+      to: '0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2',
+      data: '0x853828b60000000000000000000000000000000000000000000000000000000000000002',
+      value: '0',
+    },
+  },
+} as const
+
 export const userNoPositionFixture = {
   data: {
     borrows: [],

@@ -63,3 +63,19 @@ export interface SupplyResponse {
     value: string
   } | null
 }
+
+export const WITHDRAW_MUTATION = `mutation Withdraw($market: EvmAddress!, $underlyingToken: EvmAddress!, $chainId: ChainId!, $user: EvmAddress!, $amount: AmountAmount!) {
+  withdraw(request: {market: $market, underlyingToken: $underlyingToken, chainId: $chainId, user: $user, amount: $amount}) {
+    to
+    data
+    value
+  }
+}`
+
+export interface WithdrawResponse {
+  withdraw: {
+    to: string
+    data: string
+    value: string
+  }
+}
