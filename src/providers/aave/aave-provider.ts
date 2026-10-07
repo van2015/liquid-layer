@@ -50,6 +50,10 @@ export class AaveProvider {
     return { success: false, error: upstreamFailure() }
   }
 
+  private invalidAmount(amount: number): Result<never, InvalidAmount> {
+    return { success: false, error: { type: 'InvalidAmount', amount } }
+  }
+
   private transactionVariables(amount: number): Record<string, string> {
     return {
       market: this.config.market,
@@ -248,7 +252,7 @@ export class AaveProvider {
     amount: number,
   ): Promise<Result<TransactionRequest, InvalidAmount | UpstreamFailure>> {
     if (amount < 0) {
-      return { success: false, error: { type: 'InvalidAmount', amount } }
+      return this.invalidAmount(amount)
     }
     return this.supply(amount)
   }
@@ -277,7 +281,7 @@ export class AaveProvider {
     >
   > {
     if (amount < 0) {
-      return { success: false, error: { type: 'InvalidAmount', amount } }
+      return this.invalidAmount(amount)
     }
     return this.withdraw(amount)
   }
