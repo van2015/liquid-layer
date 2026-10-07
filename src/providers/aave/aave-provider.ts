@@ -43,6 +43,10 @@ export class AaveProvider {
     return address.toLowerCase() === this.underlyingTokenKey
   }
 
+  private upstream(): Result<never, UpstreamFailure> {
+    return { success: false, error: upstreamFailure() }
+  }
+
   private async reserve(): Promise<Result<ReserveData, UpstreamFailure>> {
     const response = await postGraphQL<ReserveResponse>(
       this.config.fetchFn,
@@ -58,10 +62,7 @@ export class AaveProvider {
       return response
     }
     if (response.value.reserve === null) {
-      return {
-        success: false,
-        error: upstreamFailure(),
-      }
+      return this.upstream()
     }
     return { success: true, value: response.value.reserve }
   }
@@ -100,10 +101,7 @@ export class AaveProvider {
     }
     const borrowInfo = reserve.value.borrowInfo
     if (borrowInfo === null) {
-      return {
-        success: false,
-        error: upstreamFailure(),
-      }
+      return this.upstream()
     }
     return { success: true, value: parseFloat(borrowInfo.apy.value) }
   }
@@ -141,10 +139,7 @@ export class AaveProvider {
       return response
     }
     if (!Array.isArray(response.value.supplies)) {
-      return {
-        success: false,
-        error: upstreamFailure(),
-      }
+      return this.upstream()
     }
     return response
   }
@@ -237,10 +232,7 @@ export class AaveProvider {
       return response
     }
     if (response.value.supply === null) {
-      return {
-        success: false,
-        error: upstreamFailure(),
-      }
+      return this.upstream()
     }
     return { success: true, value: response.value.supply }
   }
