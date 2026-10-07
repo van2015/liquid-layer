@@ -24,6 +24,13 @@ function layerWith(
   return { ...fakes, layer: new LiquidLayer(fakes.provider) }
 }
 
+function failingCall(operation: string) {
+  return vi.fn(async () => ({
+    success: false as const,
+    error: { type: 'UpstreamFailure' as const, operation },
+  }))
+}
+
 describe('LiquidLayer', async () => {
   it('a consumer opens a long position through LiquidLayer without knowing the underlying liquidity provider', async () => {
     const openPosition = vi.fn(async () => ({
@@ -507,13 +514,7 @@ describe('LiquidLayer', async () => {
   })
 
   it('propagates an upstream failure when the collateral balance cannot be read', async () => {
-    const getCollateralBalance = vi.fn(async () => ({
-      success: false as const,
-      error: {
-        type: 'UpstreamFailure' as const,
-        operation: 'getCollateralBalance',
-      },
-    }))
+    const getCollateralBalance = failingCall('getCollateralBalance')
     const provider = fakeProvider({ getCollateralBalance })
     const layer = new LiquidLayer(provider)
 
@@ -525,13 +526,7 @@ describe('LiquidLayer', async () => {
   })
 
   it('propagates an upstream failure when the required margin cannot be read', async () => {
-    const getRequiredMargin = vi.fn(async () => ({
-      success: false as const,
-      error: {
-        type: 'UpstreamFailure' as const,
-        operation: 'getRequiredMargin',
-      },
-    }))
+    const getRequiredMargin = failingCall('getRequiredMargin')
     const provider = fakeProvider({ getRequiredMargin })
     const layer = new LiquidLayer(provider)
 
@@ -543,10 +538,7 @@ describe('LiquidLayer', async () => {
   })
 
   it('propagates an upstream failure when the funding rate cannot be read', async () => {
-    const getFundingRate = vi.fn(async () => ({
-      success: false as const,
-      error: { type: 'UpstreamFailure' as const, operation: 'getFundingRate' },
-    }))
+    const getFundingRate = failingCall('getFundingRate')
     const provider = fakeProvider({ getFundingRate })
     const layer = new LiquidLayer(provider)
 
@@ -558,10 +550,7 @@ describe('LiquidLayer', async () => {
   })
 
   it('propagates an upstream failure when a position cannot be read', async () => {
-    const listPositions = vi.fn(async () => ({
-      success: false as const,
-      error: { type: 'UpstreamFailure' as const, operation: 'listPositions' },
-    }))
+    const listPositions = failingCall('listPositions')
     const provider = fakeProvider({ listPositions })
     const layer = new LiquidLayer(provider)
 
@@ -582,10 +571,7 @@ describe('LiquidLayer', async () => {
   })
 
   it('propagates an upstream failure when a settled PnL cannot be applied', async () => {
-    const settlePnl = vi.fn(async () => ({
-      success: false as const,
-      error: { type: 'UpstreamFailure' as const, operation: 'settlePnl' },
-    }))
+    const settlePnl = failingCall('settlePnl')
     const { layer } = layerWith(5000, {
       settlePnl,
       getPosition: vi.fn(async () => ({
