@@ -6,7 +6,11 @@ import {
   type Trade,
   type UpstreamFailure,
 } from '../../liquid-layer'
-import { postGraphQL, type FetchLike } from './graphql-client'
+import {
+  postGraphQL,
+  upstreamFailure,
+  type FetchLike,
+} from './graphql-client'
 import { GRAPHQL_URL } from './types'
 
 const RESERVE_QUERY = `query Reserve($market: EvmAddress!, $underlyingToken: EvmAddress!, $chainId: ChainId!) {
@@ -57,10 +61,6 @@ interface UserPositionsResponse {
     balance: { amount: { value: string }; usdPerToken: string }
     isCollateral: boolean
   }>
-}
-
-function upstreamFailure(): UpstreamFailure {
-  return { type: 'UpstreamFailure', operation: 'postGraphQL' }
 }
 
 export interface AaveProviderConfig {

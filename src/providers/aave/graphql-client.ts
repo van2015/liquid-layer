@@ -5,7 +5,7 @@ export type FetchLike = (
   init?: RequestInit,
 ) => Promise<Response>
 
-function graphQLFailure(): UpstreamFailure {
+export function upstreamFailure(): UpstreamFailure {
   return { type: 'UpstreamFailure', operation: 'postGraphQL' }
 }
 
@@ -19,10 +19,10 @@ function hasGraphQLErrors(body: unknown): boolean {
 
 function parseGraphQLBody<T>(body: unknown): Result<T, UpstreamFailure> {
   if (hasGraphQLErrors(body)) {
-    return { success: false, error: graphQLFailure() }
+    return { success: false, error: upstreamFailure() }
   }
   if (typeof body !== 'object' || body === null || !('data' in body)) {
-    return { success: false, error: graphQLFailure() }
+    return { success: false, error: upstreamFailure() }
   }
   return { success: true, value: (body as { data: T }).data }
 }
@@ -41,16 +41,16 @@ export async function postGraphQL<T>(
       body: JSON.stringify({ query, variables }),
     })
   } catch {
-    return { success: false, error: graphQLFailure() }
+    return { success: false, error: upstreamFailure() }
   }
   if (!response.ok) {
-    return { success: false, error: graphQLFailure() }
+    return { success: false, error: upstreamFailure() }
   }
   let body: unknown
   try {
     body = await response.json()
   } catch {
-    return { success: false, error: graphQLFailure() }
+    return { success: false, error: upstreamFailure() }
   }
   return parseGraphQLBody<T>(body)
 }
