@@ -28,15 +28,19 @@ function aProvider(fetchFn: FetchLike, user: string = USER): AaveProvider {
   })
 }
 
+function respondingWith(fixture: unknown) {
+  return vi.fn(
+    async (
+      _input: string | URL | Request,
+      _init?: RequestInit,
+    ): Promise<Response> =>
+      new Response(JSON.stringify(fixture), { status: 200 }),
+  )
+}
+
 describe('AaveProvider', () => {
   it('reads the required margin from the reserve max ltv', async () => {
-    const fetchFn = vi.fn(
-      async (
-        _input: string | URL | Request,
-        _init?: RequestInit,
-      ): Promise<Response> =>
-        new Response(JSON.stringify(reserveWethFixture), { status: 200 }),
-    )
+    const fetchFn = respondingWith(reserveWethFixture)
     const provider = aProvider(fetchFn)
 
     const result = await provider.getRequiredMargin(
@@ -63,13 +67,7 @@ describe('AaveProvider', () => {
   })
 
   it('reads the maintenance margin from the reserve liquidation threshold', async () => {
-    const fetchFn = vi.fn(
-      async (
-        _input: string | URL | Request,
-        _init?: RequestInit,
-      ): Promise<Response> =>
-        new Response(JSON.stringify(reserveWethFixture), { status: 200 }),
-    )
+    const fetchFn = respondingWith(reserveWethFixture)
     const provider = aProvider(fetchFn)
 
     const result = await provider.getMaintenanceMargin(
@@ -103,13 +101,7 @@ describe('AaveProvider', () => {
   })
 
   it('reads the funding rate from the reserve borrow apy', async () => {
-    const fetchFn = vi.fn(
-      async (
-        _input: string | URL | Request,
-        _init?: RequestInit,
-      ): Promise<Response> =>
-        new Response(JSON.stringify(reserveWethFixture), { status: 200 }),
-    )
+    const fetchFn = respondingWith(reserveWethFixture)
     const provider = aProvider(fetchFn)
 
     const result = await provider.getFundingRate()
@@ -125,12 +117,7 @@ describe('AaveProvider', () => {
   })
 
   it('returns an upstream failure when borrowing is disabled on the reserve', async () => {
-    const fetchFn = vi.fn(
-      async (): Promise<Response> =>
-        new Response(JSON.stringify(reserveBorrowDisabledFixture), {
-          status: 200,
-        }),
-    )
+    const fetchFn = respondingWith(reserveBorrowDisabledFixture)
     const provider = aProvider(fetchFn)
 
     const result = await provider.getFundingRate()
@@ -142,10 +129,7 @@ describe('AaveProvider', () => {
   })
 
   it('returns an upstream failure when the reserve is not found', async () => {
-    const fetchFn = vi.fn(
-      async (): Promise<Response> =>
-        new Response(JSON.stringify(reserveNotFoundFixture), { status: 200 }),
-    )
+    const fetchFn = respondingWith(reserveNotFoundFixture)
     const provider = aProvider(fetchFn)
 
     const result = await provider.getRequiredMargin(
@@ -159,15 +143,7 @@ describe('AaveProvider', () => {
   })
 
   it('reads the collateral balance from the user supplies of the reserve', async () => {
-    const fetchFn = vi.fn(
-      async (
-        _input: string | URL | Request,
-        _init?: RequestInit,
-      ): Promise<Response> =>
-        new Response(JSON.stringify(userPositionsWithSupplyFixture), {
-          status: 200,
-        }),
-    )
+    const fetchFn = respondingWith(userPositionsWithSupplyFixture)
     const provider = aProvider(fetchFn)
 
     const result = await provider.getCollateralBalance()
@@ -190,10 +166,7 @@ describe('AaveProvider', () => {
   })
 
   it('returns zero collateral when the user has no position on the reserve', async () => {
-    const fetchFn = vi.fn(
-      async (): Promise<Response> =>
-        new Response(JSON.stringify(userNoPositionFixture), { status: 200 }),
-    )
+    const fetchFn = respondingWith(userNoPositionFixture)
     const provider = aProvider(fetchFn)
 
     const result = await provider.getCollateralBalance()
@@ -202,10 +175,7 @@ describe('AaveProvider', () => {
   })
 
   it('returns an upstream failure when the positions payload has no data', async () => {
-    const fetchFn = vi.fn(
-      async (): Promise<Response> =>
-        new Response(JSON.stringify(reserveNotFoundFixture), { status: 200 }),
-    )
+    const fetchFn = respondingWith(reserveNotFoundFixture)
     const provider = aProvider(fetchFn)
 
     const result = await provider.getCollateralBalance()
@@ -217,15 +187,7 @@ describe('AaveProvider', () => {
   })
 
   it('reads a long position from the user borrow of the reserve', async () => {
-    const fetchFn = vi.fn(
-      async (
-        _input: string | URL | Request,
-        _init?: RequestInit,
-      ): Promise<Response> =>
-        new Response(JSON.stringify(userPositionsWithWethDebtFixture), {
-          status: 200,
-        }),
-    )
+    const fetchFn = respondingWith(userPositionsWithWethDebtFixture)
     const provider = aProvider(
       fetchFn,
       '0x772439Ea39a64340DcD348618C15a483D0db4c18',
@@ -245,15 +207,7 @@ describe('AaveProvider', () => {
   })
 
   it('reads a short position from the user supply of the reserve', async () => {
-    const fetchFn = vi.fn(
-      async (
-        _input: string | URL | Request,
-        _init?: RequestInit,
-      ): Promise<Response> =>
-        new Response(JSON.stringify(userPositionsWithWethSupplyFixture), {
-          status: 200,
-        }),
-    )
+    const fetchFn = respondingWith(userPositionsWithWethSupplyFixture)
     const provider = aProvider(
       fetchFn,
       '0x3FCA83e0Dec167f1348CB01c7dF5437F9ff6EBE6',
@@ -273,12 +227,7 @@ describe('AaveProvider', () => {
   })
 
   it('returns position not found when the id does not match the reserve', async () => {
-    const fetchFn = vi.fn(
-      async (): Promise<Response> =>
-        new Response(JSON.stringify(userPositionsWithWethDebtFixture), {
-          status: 200,
-        }),
-    )
+    const fetchFn = respondingWith(userPositionsWithWethDebtFixture)
     const provider = aProvider(
       fetchFn,
       '0x772439Ea39a64340DcD348618C15a483D0db4c18',
@@ -294,10 +243,7 @@ describe('AaveProvider', () => {
   })
 
   it('returns position not found when the user has no position on the reserve', async () => {
-    const fetchFn = vi.fn(
-      async (): Promise<Response> =>
-        new Response(JSON.stringify(userNoPositionFixture), { status: 200 }),
-    )
+    const fetchFn = respondingWith(userNoPositionFixture)
     const provider = aProvider(fetchFn)
     const positionId = `1:${MARKET}:${WETH}`
 
@@ -310,15 +256,7 @@ describe('AaveProvider', () => {
   })
 
   it('lists the current reserve position as a single entry', async () => {
-    const fetchFn = vi.fn(
-      async (
-        _input: string | URL | Request,
-        _init?: RequestInit,
-      ): Promise<Response> =>
-        new Response(JSON.stringify(userPositionsWithWethDebtFixture), {
-          status: 200,
-        }),
-    )
+    const fetchFn = respondingWith(userPositionsWithWethDebtFixture)
     const provider = aProvider(
       fetchFn,
       '0x772439Ea39a64340DcD348618C15a483D0db4c18',
@@ -340,10 +278,7 @@ describe('AaveProvider', () => {
   })
 
   it('lists an empty list when the user has no position', async () => {
-    const fetchFn = vi.fn(
-      async (): Promise<Response> =>
-        new Response(JSON.stringify(userNoPositionFixture), { status: 200 }),
-    )
+    const fetchFn = respondingWith(userNoPositionFixture)
     const provider = aProvider(fetchFn)
 
     const result = await provider.listPositions()
