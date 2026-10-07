@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   LiquidLayer,
   Side,
+  type LiquidityProvider,
   type Position,
   type PositionNotFound,
   type Result,
@@ -14,6 +15,14 @@ import {
 } from './test-support/fake-collateral-provider'
 import { aPosition } from './test-support/position-builder'
 import { aTrade } from './test-support/trade-builder'
+
+function layerWith(
+  balance = 0,
+  overrides: Partial<LiquidityProvider> = {},
+) {
+  const fakes = fakeCollateralProvider(balance, overrides)
+  return { ...fakes, layer: new LiquidLayer(fakes.provider) }
+}
 
 describe('LiquidLayer', async () => {
   it('a consumer opens a long position through LiquidLayer without knowing the underlying liquidity provider', async () => {
@@ -80,8 +89,7 @@ describe('LiquidLayer', async () => {
   })
 
   it('a consumer deposits collateral and sees the updated balance without knowing which protocol holds it', async () => {
-    const { provider, depositCollateral } = fakeCollateralProvider()
-    const layer = new LiquidLayer(provider)
+    const { layer, depositCollateral } = layerWith()
 
     const result = await layer.depositCollateral(1000)
 
@@ -95,8 +103,7 @@ describe('LiquidLayer', async () => {
   })
 
   it('rejects depositing a negative amount', async () => {
-    const { provider, depositCollateral } = fakeCollateralProvider(500)
-    const layer = new LiquidLayer(provider)
+    const { layer, depositCollateral } = layerWith(500)
 
     expect(await layer.depositCollateral(-100)).toEqual({
       success: false,
@@ -106,8 +113,7 @@ describe('LiquidLayer', async () => {
   })
 
   it('a consumer withdraws collateral and sees the updated balance', async () => {
-    const { provider, withdrawCollateral } = fakeCollateralProvider()
-    const layer = new LiquidLayer(provider)
+    const { layer, withdrawCollateral } = layerWith()
 
     await layer.depositCollateral(1000)
     const result = await layer.withdrawCollateral(400)
@@ -122,8 +128,7 @@ describe('LiquidLayer', async () => {
   })
 
   it('rejects withdrawing more collateral than the available balance', async () => {
-    const { provider, withdrawCollateral } = fakeCollateralProvider(500)
-    const layer = new LiquidLayer(provider)
+    const { layer, withdrawCollateral } = layerWith(500)
 
     expect(await layer.withdrawCollateral(1000)).toEqual({
       success: false,
@@ -133,8 +138,7 @@ describe('LiquidLayer', async () => {
   })
 
   it('rejects withdrawing a negative amount', async () => {
-    const { provider, withdrawCollateral } = fakeCollateralProvider(500)
-    const layer = new LiquidLayer(provider)
+    const { layer, withdrawCollateral } = layerWith(500)
 
     expect(await layer.withdrawCollateral(-100)).toEqual({
       success: false,
@@ -144,8 +148,7 @@ describe('LiquidLayer', async () => {
   })
 
   it('rejects opening a position when collateral is below the required initial margin', async () => {
-    const { provider } = fakeCollateralProvider(500)
-    const layer = new LiquidLayer(provider)
+    const { provider, layer } = layerWith(500)
 
     expect(await layer.openPosition(aTrade().long().entryPrice(60000).build())).toEqual({
       success: false,
@@ -155,8 +158,7 @@ describe('LiquidLayer', async () => {
   })
 
   it('rejects opening a position with a non-positive size', async () => {
-    const { provider } = fakeCollateralProvider(5000)
-    const layer = new LiquidLayer(provider)
+    const { provider, layer } = layerWith(5000)
 
     expect(
       await layer.openPosition(aTrade().long().size(0).entryPrice(60000).build()),
@@ -168,8 +170,7 @@ describe('LiquidLayer', async () => {
   })
 
   it('rejects opening a position with a non-positive entry price', async () => {
-    const { provider } = fakeCollateralProvider(5000)
-    const layer = new LiquidLayer(provider)
+    const { provider, layer } = layerWith(5000)
 
     expect(
       await layer.openPosition(aTrade().long().entryPrice(0).build()),
@@ -181,8 +182,7 @@ describe('LiquidLayer', async () => {
   })
 
   it('rejects closing a position with a non-positive exit price', async () => {
-    const { provider } = fakeCollateralProvider(5000)
-    const layer = new LiquidLayer(provider)
+    const { provider, layer } = layerWith(5000)
 
     expect(await layer.closePosition('pos-1', -100)).toEqual({
       success: false,
@@ -193,8 +193,7 @@ describe('LiquidLayer', async () => {
   })
 
   it('a consumer checks the collateral balance through the layer without knowing the protocol', async () => {
-    const { provider, getCollateralBalance } = fakeCollateralProvider(1000)
-    const layer = new LiquidLayer(provider)
+    const { layer, getCollateralBalance } = layerWith(1000)
 
     const balance = await layer.getCollateralBalance()
 
@@ -207,14 +206,13 @@ describe('LiquidLayer', async () => {
       success: true as const,
       value: preparedTx,
     }))
-    const { provider, settlePnl } = fakeCollateralProvider(5000, {
+    const { layer, settlePnl } = layerWith(5000, {
       closePosition,
       getPosition: vi.fn(async () => ({
         success: true as const,
         value: aPosition().id('pos-1').long().size(1).entryPrice(60000).build(),
       })),
     })
-    const layer = new LiquidLayer(provider)
 
     const result = await layer.closePosition('pos-1', 61000)
 
@@ -271,21 +269,17 @@ describe('LiquidLayer', async () => {
   })
 
   it('computes the equity of a long position at the current mark price', async () => {
-    const { provider, settlePnl, settleFunding } = fakeCollateralProvider(
-      6000,
-      {
-        getPosition: vi.fn(async () => ({
-          success: true as const,
-          value: aPosition()
-            .id('pos-1')
-            .long()
-            .size(1)
-            .entryPrice(60000)
-            .build(),
-        })),
-      },
-    )
-    const layer = new LiquidLayer(provider)
+    const { layer, settlePnl, settleFunding } = layerWith(6000, {
+      getPosition: vi.fn(async () => ({
+        success: true as const,
+        value: aPosition()
+          .id('pos-1')
+          .long()
+          .size(1)
+          .entryPrice(60000)
+          .build(),
+      })),
+    })
 
     expect(await layer.getEquity('pos-1', 55000)).toEqual({
       success: true,
@@ -300,20 +294,18 @@ describe('LiquidLayer', async () => {
       success: true as const,
       value: preparedTx,
     }))
-    const { provider, settlePnl, getCollateralBalance } =
-      fakeCollateralProvider(6000, {
-        getPosition: vi.fn(async () => ({
-          success: true as const,
-          value: aPosition()
-            .id('pos-1')
-            .long()
-            .size(1)
-            .entryPrice(60000)
-            .build(),
-        })),
-        closePosition,
-      })
-    const layer = new LiquidLayer(provider)
+    const { layer, settlePnl, getCollateralBalance } = layerWith(6000, {
+      getPosition: vi.fn(async () => ({
+        success: true as const,
+        value: aPosition()
+          .id('pos-1')
+          .long()
+          .size(1)
+          .entryPrice(60000)
+          .build(),
+      })),
+      closePosition,
+    })
 
     expect(await layer.checkLiquidation('pos-1', 55000)).toEqual({
       success: true,
@@ -330,7 +322,7 @@ describe('LiquidLayer', async () => {
   })
 
   it('rejects closing a position that was already closed', async () => {
-    const { provider, settlePnl } = fakeCollateralProvider(6000, {
+    const { provider, layer, settlePnl } = layerWith(6000, {
       getPosition: vi.fn(async () => ({
         success: true as const,
         value: {
@@ -339,7 +331,6 @@ describe('LiquidLayer', async () => {
         },
       })),
     })
-    const layer = new LiquidLayer(provider)
 
     expect(await layer.closePosition('pos-1', 56000)).toEqual({
       success: false,
@@ -350,13 +341,12 @@ describe('LiquidLayer', async () => {
   })
 
   it('rejects closing a position whose loss exceeds the collateral balance', async () => {
-    const { provider, settlePnl } = fakeCollateralProvider(6000, {
+    const { provider, layer, settlePnl } = layerWith(6000, {
       getPosition: vi.fn(async () => ({
         success: true as const,
         value: aPosition().id('pos-1').long().size(1).entryPrice(60000).build(),
       })),
     })
-    const layer = new LiquidLayer(provider)
 
     expect(await layer.closePosition('pos-1', 1000)).toEqual({
       success: false,
@@ -367,7 +357,7 @@ describe('LiquidLayer', async () => {
   })
 
   it('rejects paying funding for a position that was already closed', async () => {
-    const { provider, settleFunding } = fakeCollateralProvider(5000, {
+    const { layer, settleFunding } = layerWith(5000, {
       getPosition: vi.fn(async () => ({
         success: true as const,
         value: {
@@ -376,7 +366,6 @@ describe('LiquidLayer', async () => {
         },
       })),
     })
-    const layer = new LiquidLayer(provider)
 
     expect(await layer.payFunding('pos-1')).toEqual({
       success: false,
@@ -390,8 +379,7 @@ describe('LiquidLayer', async () => {
       success: true as const,
       value: aPosition().id('pos-1').long().size(1).entryPrice(60000).build(),
     }))
-    const { provider } = fakeCollateralProvider(6000, { getPosition })
-    const layer = new LiquidLayer(provider)
+    const { layer } = layerWith(6000, { getPosition })
 
     expect(await layer.getEquity('pos-1', -100)).toEqual({
       success: false,
@@ -401,7 +389,7 @@ describe('LiquidLayer', async () => {
   })
 
   it('rejects computing equity for a position that was already closed', async () => {
-    const { provider } = fakeCollateralProvider(6000, {
+    const { layer } = layerWith(6000, {
       getPosition: vi.fn(async () => ({
         success: true as const,
         value: {
@@ -410,7 +398,6 @@ describe('LiquidLayer', async () => {
         },
       })),
     })
-    const layer = new LiquidLayer(provider)
 
     expect(await layer.getEquity('pos-1', 55000)).toEqual({
       success: false,
@@ -454,11 +441,10 @@ describe('LiquidLayer', async () => {
         value: aPosition().id(id).long().size(1).entryPrice(60000).build(),
       }),
     )
-    const { provider, settleFunding } = fakeCollateralProvider(5000, {
+    const { layer, settleFunding } = layerWith(5000, {
       getPosition,
       getFundingRate: async () => ({ success: true as const, value: 0.0001 }),
     })
-    const layer = new LiquidLayer(provider)
 
     const result = await layer.payFunding('pos-1')
 
@@ -477,11 +463,10 @@ describe('LiquidLayer', async () => {
         value: aPosition().id(id).short().size(1).entryPrice(60000).build(),
       }),
     )
-    const { provider, settleFunding } = fakeCollateralProvider(5000, {
+    const { layer, settleFunding } = layerWith(5000, {
       getPosition,
       getFundingRate: async () => ({ success: true as const, value: 0.0001 }),
     })
-    const layer = new LiquidLayer(provider)
 
     const result = await layer.payFunding('pos-2')
 
@@ -512,11 +497,7 @@ describe('LiquidLayer', async () => {
             }
           : { success: false, error: { type: 'PositionNotFound', id } },
     )
-    const { provider } = fakeCollateralProvider(5000, {
-      closePosition,
-      getPosition,
-    })
-    const layer = new LiquidLayer(provider)
+    const { layer } = layerWith(5000, { closePosition, getPosition })
 
     expect(await layer.closePosition('pos-9', 1000)).toEqual({
       success: false,
@@ -591,8 +572,7 @@ describe('LiquidLayer', async () => {
   })
 
   it('reads the collateral balance asynchronously', async () => {
-    const { provider } = fakeCollateralProvider(1000)
-    const layer = new LiquidLayer(provider)
+    const { layer } = layerWith(1000)
 
     const pending = layer.getCollateralBalance()
     await expect(pending).resolves.toEqual({
@@ -606,7 +586,7 @@ describe('LiquidLayer', async () => {
       success: false as const,
       error: { type: 'UpstreamFailure' as const, operation: 'settlePnl' },
     }))
-    const { provider } = fakeCollateralProvider(5000, {
+    const { layer } = layerWith(5000, {
       settlePnl,
       getPosition: vi.fn(async () => ({
         success: true as const,
@@ -617,7 +597,6 @@ describe('LiquidLayer', async () => {
         value: preparedTx,
       })),
     })
-    const layer = new LiquidLayer(provider)
 
     expect(await layer.closePosition('pos-1', 61000)).toEqual({
       success: false,
