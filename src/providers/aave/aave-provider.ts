@@ -213,12 +213,9 @@ export class AaveProvider {
     return { success: true, value: [position.value] }
   }
 
-  async depositCollateral(
+  private async supply(
     amount: number,
-  ): Promise<Result<TransactionRequest, InvalidAmount | UpstreamFailure>> {
-    if (amount < 0) {
-      return { success: false, error: { type: 'InvalidAmount', amount } }
-    }
+  ): Promise<Result<TransactionRequest, UpstreamFailure>> {
     const response = await postGraphQL<SupplyResponse>(
       this.config.fetchFn,
       GRAPHQL_URL,
@@ -238,6 +235,15 @@ export class AaveProvider {
       return this.upstream()
     }
     return { success: true, value: response.value.supply }
+  }
+
+  async depositCollateral(
+    amount: number,
+  ): Promise<Result<TransactionRequest, InvalidAmount | UpstreamFailure>> {
+    if (amount < 0) {
+      return { success: false, error: { type: 'InvalidAmount', amount } }
+    }
+    return this.supply(amount)
   }
 
   async settlePnl(_amount: number): Promise<Result<void, UpstreamFailure>> {
