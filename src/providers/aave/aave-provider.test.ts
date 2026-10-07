@@ -9,6 +9,7 @@ import {
   userPositionsWithWethDebtFixture,
   userPositionsWithWethSupplyFixture,
   supplyTxFixture,
+  supplyMissingTxFixture,
   postGraphQLFailureResult,
 } from '../../test-support/aave-fixtures'
 import { aTrade } from '../../test-support/trade-builder'
@@ -206,6 +207,15 @@ describe('AaveProvider', () => {
       user: USER,
       amount: '1.5',
     })
+  })
+
+  it('returns an upstream failure when the mutation returns no transaction', async () => {
+    const fetchFn = respondingWith(supplyMissingTxFixture)
+    const provider = aProvider(fetchFn)
+
+    const result = await provider.depositCollateral(1.5)
+
+    expect(result).toEqual(postGraphQLFailureResult)
   })
 
   it('reads a long position from the user borrow of the reserve', async () => {

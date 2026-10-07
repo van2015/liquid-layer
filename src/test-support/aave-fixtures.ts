@@ -64,6 +64,12 @@ export const supplyTxFixture = {
   },
 } as const
 
+export const supplyMissingTxFixture = {
+  data: {
+    supply: null,
+  },
+} as const
+
 export const userNoPositionFixture = {
   data: {
     borrows: [],

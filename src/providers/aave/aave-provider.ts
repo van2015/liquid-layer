@@ -236,6 +236,12 @@ export class AaveProvider {
     if (!response.success) {
       return response
     }
+    if (response.value.supply === null) {
+      return {
+        success: false,
+        error: upstreamFailure(),
+      }
+    }
     return { success: true, value: response.value.supply }
   }
 
