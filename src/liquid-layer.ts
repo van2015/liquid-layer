@@ -323,11 +323,7 @@ export class LiquidLayer {
     if (!open.success) {
       return open
     }
-    const equity = await this.equityOf(open.value, markPrice)
-    if (!equity.success) {
-      return equity
-    }
-    return equity
+    return this.equityOf(open.value, markPrice)
   }
 
   private async equityOf(
