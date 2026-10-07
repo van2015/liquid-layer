@@ -12,6 +12,7 @@ import {
   supplyTxFixture,
   supplyMissingTxFixture,
   withdrawTxFixture,
+  withdrawMissingTxFixture,
   postGraphQLFailureResult,
 } from '../../test-support/aave-fixtures'
 import { aTrade } from '../../test-support/trade-builder'
@@ -308,6 +309,18 @@ describe('AaveProvider', () => {
       error: { type: 'InsufficientBalance', requested: 250, available: 100 },
     })
     expect(fetchFn).toHaveBeenCalledTimes(1)
+  })
+
+  it('returns an upstream failure when the withdraw mutation returns no transaction', async () => {
+    const fetchFn = respondingInSequence(
+      userWethCollateralFixture,
+      withdrawMissingTxFixture,
+    )
+    const provider = aProvider(fetchFn)
+
+    const result = await provider.withdrawCollateral(2)
+
+    expect(result).toEqual(postGraphQLFailureResult)
   })
 
   it('reads a long position from the user borrow of the reserve', async () => {

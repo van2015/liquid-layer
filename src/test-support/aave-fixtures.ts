@@ -87,6 +87,12 @@ export const userNoPositionFixture = {
   },
 } as const
 
+export const withdrawMissingTxFixture = {
+  data: {
+    withdraw: null,
+  },
+} as const
+
 export const userWethCollateralFixture = {
   data: {
     borrows: [],

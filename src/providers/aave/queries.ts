@@ -77,5 +77,5 @@ export interface WithdrawResponse {
     to: string
     data: string
     value: string
-  }
+  } | null
 }

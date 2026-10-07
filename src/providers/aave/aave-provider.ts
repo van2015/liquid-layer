@@ -269,6 +269,9 @@ export class AaveProvider {
     if (!response.success) {
       return response
     }
+    if (response.value.withdraw === null) {
+      return this.upstream()
+    }
     return { success: true, value: response.value.withdraw }
   }
 
