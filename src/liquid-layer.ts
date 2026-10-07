@@ -51,6 +51,10 @@ export type UpstreamFailure = {
   readonly operation: string
 }
 
+export type OpenError = PositionNotFound | PositionAlreadyClosed | UpstreamFailure
+
+export type PricedOpenError = InvalidPrice | OpenError
+
 export type Result<T, E extends DomainError> =
   | { success: true; value: T }
   | { success: false; error: E }
@@ -90,7 +94,7 @@ export interface LiquidityProvider {
   ): Promise<
     Result<
       TransactionRequest,
-      PositionNotFound | PositionAlreadyClosed | UpstreamFailure
+      OpenError
     >
   >
   depositCollateral(
@@ -206,7 +210,7 @@ export class LiquidLayer {
   ): Promise<
     Result<
       TransactionRequest,
-      PositionNotFound | PositionAlreadyClosed | UpstreamFailure
+      OpenError
     >
   > {
     const closed = await this.provider.closePosition(id, exitPrice)
@@ -225,7 +229,7 @@ export class LiquidLayer {
   ): Promise<
     Result<
       Position,
-      PositionNotFound | PositionAlreadyClosed | UpstreamFailure
+      OpenError
     >
   > {
     const found = await this.provider.getPosition(id)
@@ -244,7 +248,7 @@ export class LiquidLayer {
   ): Promise<
     Result<
       Position,
-      InvalidPrice | PositionNotFound | PositionAlreadyClosed | UpstreamFailure
+      PricedOpenError
     >
   > {
     if (price <= 0) {
@@ -316,7 +320,7 @@ export class LiquidLayer {
   ): Promise<
     Result<
       number,
-      InvalidPrice | PositionNotFound | PositionAlreadyClosed | UpstreamFailure
+      PricedOpenError
     >
   > {
     const open = await this.ensurePricedOpen(id, markPrice)
@@ -372,7 +376,7 @@ export class LiquidLayer {
         realizedPnl?: number
         tx?: TransactionRequest
       },
-      PositionNotFound | InvalidPrice | PositionAlreadyClosed | UpstreamFailure
+      PricedOpenError
     >
   > {
     const open = await this.ensurePricedOpen(id, markPrice)
@@ -411,7 +415,7 @@ export class LiquidLayer {
   async payFunding(
     id: string,
   ): Promise<
-    Result<void, PositionNotFound | PositionAlreadyClosed | UpstreamFailure>
+    Result<void, OpenError>
   > {
     const open = await this.ensureOpen(id)
     if (!open.success) {
