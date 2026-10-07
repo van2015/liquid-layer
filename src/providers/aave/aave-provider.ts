@@ -50,6 +50,16 @@ export class AaveProvider {
     return { success: false, error: upstreamFailure() }
   }
 
+  private transactionVariables(amount: number): Record<string, string> {
+    return {
+      market: this.config.market,
+      underlyingToken: this.config.underlyingToken,
+      chainId: this.config.chainId,
+      user: this.config.user,
+      amount: String(amount),
+    }
+  }
+
   private async reserve(): Promise<Result<ReserveData, UpstreamFailure>> {
     const response = await postGraphQL<ReserveResponse>(
       this.config.fetchFn,
@@ -223,13 +233,7 @@ export class AaveProvider {
       this.config.fetchFn,
       GRAPHQL_URL,
       SUPPLY_MUTATION,
-      {
-        market: this.config.market,
-        underlyingToken: this.config.underlyingToken,
-        chainId: this.config.chainId,
-        user: this.config.user,
-        amount: String(amount),
-      },
+      this.transactionVariables(amount),
     )
     if (!response.success) {
       return response
@@ -256,13 +260,7 @@ export class AaveProvider {
       this.config.fetchFn,
       GRAPHQL_URL,
       WITHDRAW_MUTATION,
-      {
-        market: this.config.market,
-        underlyingToken: this.config.underlyingToken,
-        chainId: this.config.chainId,
-        user: this.config.user,
-        amount: String(amount),
-      },
+      this.transactionVariables(amount),
     )
     if (!response.success) {
       return response
