@@ -108,28 +108,27 @@ export class AaveProvider {
   async getRequiredMargin(
     trade: Trade,
   ): Promise<Result<number, UpstreamFailure>> {
-    const reserve = await this.reserve()
-    if (!reserve.success) {
-      return reserve
-    }
-    const maxLTV = parseFloat(reserve.value.supplyInfo.maxLTV.value)
-    return {
-      success: true,
-      value: (trade.size * trade.entryPrice) / maxLTV,
-    }
+    return this.margin(trade, 'maxLTV')
   }
 
   async getMaintenanceMargin(
     trade: Trade,
   ): Promise<Result<number, UpstreamFailure>> {
+    return this.margin(trade, 'liquidationThreshold')
+  }
+
+  private async margin(
+    trade: Trade,
+    ratioField: 'maxLTV' | 'liquidationThreshold',
+  ): Promise<Result<number, UpstreamFailure>> {
     const reserve = await this.reserve()
     if (!reserve.success) {
       return reserve
     }
-    const threshold = parseFloat(reserve.value.supplyInfo.liquidationThreshold.value)
+    const ratio = parseFloat(reserve.value.supplyInfo[ratioField].value)
     return {
       success: true,
-      value: (trade.size * trade.entryPrice) / threshold,
+      value: (trade.size * trade.entryPrice) / ratio,
     }
   }
 
