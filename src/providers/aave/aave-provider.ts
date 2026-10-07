@@ -193,6 +193,20 @@ export class AaveProvider {
     return `${this.config.chainId}:${this.config.market}:${this.config.underlyingToken}`
   }
 
+  private positionFrom(
+    side: Side,
+    size: number,
+    entryPrice: number,
+  ): Position {
+    return {
+      id: this.positionId(),
+      side,
+      size,
+      entryPrice,
+      exitPrice: undefined,
+    }
+  }
+
   async getPosition(
     id: string,
   ): Promise<Result<Position, PositionNotFound | UpstreamFailure>> {
@@ -210,13 +224,11 @@ export class AaveProvider {
       const size = parseFloat(borrow.debt.amount.value)
       return {
         success: true,
-        value: {
-          id: this.positionId(),
-          side: Side.Long,
+        value: this.positionFrom(
+          Side.Long,
           size,
-          entryPrice: parseFloat(borrow.debt.usd) / size,
-          exitPrice: undefined,
-        },
+          parseFloat(borrow.debt.usd) / size,
+        ),
       }
     }
     const supply = positions.value.supplies.find((entry) =>
@@ -225,13 +237,11 @@ export class AaveProvider {
     if (supply !== undefined) {
       return {
         success: true,
-        value: {
-          id: this.positionId(),
-          side: Side.Short,
-          size: parseFloat(supply.balance.amount.value),
-          entryPrice: parseFloat(supply.balance.usdPerToken),
-          exitPrice: undefined,
-        },
+        value: this.positionFrom(
+          Side.Short,
+          parseFloat(supply.balance.amount.value),
+          parseFloat(supply.balance.usdPerToken),
+        ),
       }
     }
     return { success: false, error: { type: 'PositionNotFound', id } }
