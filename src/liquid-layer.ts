@@ -55,6 +55,12 @@ export type OpenError = PositionNotFound | PositionAlreadyClosed | UpstreamFailu
 
 export type PricedOpenError = InvalidPrice | OpenError
 
+export type OpenPositionError =
+  | InsufficientMargin
+  | InvalidSize
+  | InvalidPrice
+  | UpstreamFailure
+
 export type Result<T, E extends DomainError> =
   | { success: true; value: T }
   | { success: false; error: E }
@@ -85,7 +91,7 @@ export interface LiquidityProvider {
   ): Promise<
     Result<
       TransactionRequest,
-      InsufficientMargin | InvalidSize | InvalidPrice | UpstreamFailure
+      OpenPositionError
     >
   >
   closePosition(
@@ -136,7 +142,7 @@ export class LiquidLayer {
   async openPosition(trade: Trade): Promise<
     Result<
       TransactionRequest,
-      InsufficientMargin | InvalidSize | InvalidPrice | UpstreamFailure
+      OpenPositionError
     >
   > {
     if (trade.size <= 0) {
