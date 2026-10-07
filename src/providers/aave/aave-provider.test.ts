@@ -435,4 +435,22 @@ describe('AaveProvider', () => {
     expect(result).toEqual({ success: true, value: undefined })
     expect(fetchFn).not.toHaveBeenCalled()
   })
+
+  it('settles funding as a no-op without preparing a transaction', async () => {
+    const fetchFn = vi.fn(async (): Promise<Response> => {
+      throw new Error('network should not be called')
+    })
+    const provider = new AaveProvider({
+      fetchFn,
+      market: MARKET,
+      underlyingToken: WETH,
+      chainId: '1',
+      user: USER,
+    })
+
+    const result = await provider.settleFunding(0.42)
+
+    expect(result).toEqual({ success: true, value: undefined })
+    expect(fetchFn).not.toHaveBeenCalled()
+  })
 })
