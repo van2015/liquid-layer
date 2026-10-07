@@ -8,6 +8,7 @@ import {
   userNoPositionFixture,
   userPositionsWithWethDebtFixture,
   userPositionsWithWethSupplyFixture,
+  supplyTxFixture,
   postGraphQLFailureResult,
 } from '../../test-support/aave-fixtures'
 import { aTrade } from '../../test-support/trade-builder'
@@ -173,6 +174,38 @@ describe('AaveProvider', () => {
     const result = await provider.getCollateralBalance()
 
     expect(result).toEqual(postGraphQLFailureResult)
+  })
+
+  it('prepares a supply transaction when depositing collateral', async () => {
+    const fetchFn = respondingWith(supplyTxFixture)
+    const provider = aProvider(fetchFn)
+
+    const result = await provider.depositCollateral(1.5)
+
+    expect(result).toEqual({
+      success: true,
+      value: {
+        to: '0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2',
+        data: '0x617ba0370000000000000000000000000000000000000000000000000000000000000001',
+        value: '0',
+      },
+    })
+    expect(fetchFn).toHaveBeenCalledTimes(1)
+    const [url, init] = fetchFn.mock.calls[0]!
+    expect(url).toBe(GRAPHQL_URL)
+    const body = JSON.parse(String(init?.body)) as {
+      query: string
+      variables: Record<string, string>
+    }
+    expect(body.query).toContain('mutation')
+    expect(body.query).toContain('supply(request:')
+    expect(body.variables).toEqual({
+      market: MARKET,
+      underlyingToken: WETH,
+      chainId: '1',
+      user: USER,
+      amount: '1.5',
+    })
   })
 
   it('reads a long position from the user borrow of the reserve', async () => {

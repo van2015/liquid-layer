@@ -47,3 +47,19 @@ export interface UserPositionsResponse {
     isCollateral: boolean
   }>
 }
+
+export const SUPPLY_MUTATION = `mutation Supply($market: EvmAddress!, $underlyingToken: EvmAddress!, $chainId: ChainId!, $user: EvmAddress!, $amount: AmountAmount!) {
+  supply(request: {market: $market, underlyingToken: $underlyingToken, chainId: $chainId, user: $user, amount: $amount}) {
+    to
+    data
+    value
+  }
+}`
+
+export interface SupplyResponse {
+  supply: {
+    to: string
+    data: string
+    value: string
+  }
+}
