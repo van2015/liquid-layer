@@ -218,6 +218,21 @@ describe('AaveProvider', () => {
     expect(result).toEqual(postGraphQLFailureResult)
   })
 
+  it('rejects a negative deposit without calling the api', async () => {
+    const fetchFn = vi.fn(async (): Promise<Response> => {
+      throw new Error('network should not be called')
+    })
+    const provider = aProvider(fetchFn)
+
+    const result = await provider.depositCollateral(-1)
+
+    expect(result).toEqual({
+      success: false,
+      error: { type: 'InvalidAmount', amount: -1 },
+    })
+    expect(fetchFn).not.toHaveBeenCalled()
+  })
+
   it('reads a long position from the user borrow of the reserve', async () => {
     const fetchFn = respondingWith(userPositionsWithWethDebtFixture)
     const provider = aProvider(

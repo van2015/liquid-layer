@@ -216,6 +216,9 @@ export class AaveProvider {
   async depositCollateral(
     amount: number,
   ): Promise<Result<TransactionRequest, InvalidAmount | UpstreamFailure>> {
+    if (amount < 0) {
+      return { success: false, error: { type: 'InvalidAmount', amount } }
+    }
     const response = await postGraphQL<SupplyResponse>(
       this.config.fetchFn,
       GRAPHQL_URL,
