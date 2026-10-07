@@ -125,12 +125,10 @@ const fail = <E extends DomainError>(error: E): Result<never, E> => ({
   error,
 })
 
-const pnl = (
-  side: Side,
-  entryPrice: number,
-  price: number,
-  size: number,
-): number => (price - entryPrice) * size * (side === Side.Long ? 1 : -1)
+const pnl = (position: Position, price: number): number =>
+  (price - position.entryPrice) *
+  position.size *
+  (position.side === Side.Long ? 1 : -1)
 
 export class LiquidLayer {
   constructor(private readonly provider: LiquidityProvider) {}
@@ -183,12 +181,7 @@ export class LiquidLayer {
       return open
     }
     const current = open.value
-    const provisionalPnl = pnl(
-      current.side,
-      current.entryPrice,
-      exitPrice,
-      current.size,
-    )
+    const provisionalPnl = pnl(current, exitPrice)
     const balance = await this.provider.getCollateralBalance()
     if (!balance.success) {
       return balance
@@ -342,7 +335,7 @@ export class LiquidLayer {
       success: true,
       value:
         balance.value +
-        pnl(position.side, position.entryPrice, markPrice, position.size),
+        pnl(position, markPrice),
     }
   }
 
@@ -391,12 +384,7 @@ export class LiquidLayer {
     if (covered.value) {
       return { success: true, value: { liquidated: false } }
     }
-    const realizedPnl = pnl(
-      position.side,
-      position.entryPrice,
-      markPrice,
-      position.size,
-    )
+    const realizedPnl = pnl(position, markPrice)
     const settled = await this.closeAndSettle(id, markPrice, realizedPnl)
     if (!settled.success) {
       return settled
