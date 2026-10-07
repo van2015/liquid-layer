@@ -196,13 +196,13 @@ export class LiquidLayer {
         available: balance.value,
       })
     }
-    return this.closeAndSettle(current, id, exitPrice)
+    return this.closeAndSettle(id, exitPrice, provisionalPnl)
   }
 
   private async closeAndSettle(
-    current: Position,
     id: string,
     exitPrice: number,
+    realizedPnl: number,
   ): Promise<
     Result<
       TransactionRequest,
@@ -213,12 +213,6 @@ export class LiquidLayer {
     if (!closed.success) {
       return closed
     }
-    const realizedPnl = pnl(
-      current.side,
-      current.entryPrice,
-      exitPrice,
-      current.size,
-    )
     const settled = await this.provider.settlePnl(realizedPnl)
     if (!settled.success) {
       return settled
@@ -397,16 +391,16 @@ export class LiquidLayer {
     if (covered.value) {
       return { success: true, value: { liquidated: false } }
     }
-    const settled = await this.closeAndSettle(position, id, markPrice)
-    if (!settled.success) {
-      return settled
-    }
     const realizedPnl = pnl(
       position.side,
       position.entryPrice,
       markPrice,
       position.size,
     )
+    const settled = await this.closeAndSettle(id, markPrice, realizedPnl)
+    if (!settled.success) {
+      return settled
+    }
     return {
       success: true,
       value: {
