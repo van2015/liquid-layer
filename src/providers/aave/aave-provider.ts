@@ -276,6 +276,9 @@ export class AaveProvider {
       InsufficientBalance | InvalidAmount | UpstreamFailure
     >
   > {
+    if (amount < 0) {
+      return { success: false, error: { type: 'InvalidAmount', amount } }
+    }
     return this.withdraw(amount)
   }
 
