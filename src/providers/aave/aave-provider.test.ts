@@ -8,6 +8,7 @@ import {
   userNoPositionFixture,
   userPositionsWithWethDebtFixture,
   userPositionsWithWethSupplyFixture,
+  postGraphQLFailureResult,
 } from '../../test-support/aave-fixtures'
 import { aTrade } from '../../test-support/trade-builder'
 import { AaveProvider } from './aave-provider'
@@ -94,10 +95,7 @@ describe('AaveProvider', () => {
       aTrade().long().entryPrice(60000).build(),
     )
 
-    expect(result).toEqual({
-      success: false,
-      error: { type: 'UpstreamFailure', operation: 'postGraphQL' },
-    })
+    expect(result).toEqual(postGraphQLFailureResult)
   })
 
   it('reads the funding rate from the reserve borrow apy', async () => {
@@ -122,10 +120,7 @@ describe('AaveProvider', () => {
 
     const result = await provider.getFundingRate()
 
-    expect(result).toEqual({
-      success: false,
-      error: { type: 'UpstreamFailure', operation: 'postGraphQL' },
-    })
+    expect(result).toEqual(postGraphQLFailureResult)
   })
 
   it('returns an upstream failure when the reserve is not found', async () => {
@@ -136,10 +131,7 @@ describe('AaveProvider', () => {
       aTrade().long().entryPrice(60000).build(),
     )
 
-    expect(result).toEqual({
-      success: false,
-      error: { type: 'UpstreamFailure', operation: 'postGraphQL' },
-    })
+    expect(result).toEqual(postGraphQLFailureResult)
   })
 
   it('reads the collateral balance from the user supplies of the reserve', async () => {
@@ -180,10 +172,7 @@ describe('AaveProvider', () => {
 
     const result = await provider.getCollateralBalance()
 
-    expect(result).toEqual({
-      success: false,
-      error: { type: 'UpstreamFailure', operation: 'postGraphQL' },
-    })
+    expect(result).toEqual(postGraphQLFailureResult)
   })
 
   it('reads a long position from the user borrow of the reserve', async () => {

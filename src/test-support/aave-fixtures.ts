@@ -1,3 +1,8 @@
+export const postGraphQLFailureResult = {
+  success: false,
+  error: { type: 'UpstreamFailure', operation: 'postGraphQL' },
+} as const
+
 export const reserveWethFixture = {
   data: {
     reserve: {

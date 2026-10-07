@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import { postGraphQLFailureResult } from '../../test-support/aave-fixtures'
 import { postGraphQL } from './graphql-client'
 import { GRAPHQL_URL } from './types'
 
@@ -48,10 +49,7 @@ describe('postGraphQL', () => {
 
     const result = await postGraphQL(fetchFn, GRAPHQL_URL, 'query { x }', {})
 
-    expect(result).toEqual({
-      success: false,
-      error: { type: 'UpstreamFailure', operation: 'postGraphQL' },
-    })
+    expect(result).toEqual(postGraphQLFailureResult)
   })
 
   it('returns an upstream failure when the fetch itself fails', async () => {
@@ -61,10 +59,7 @@ describe('postGraphQL', () => {
 
     const result = await postGraphQL(fetchFn, GRAPHQL_URL, 'query { x }', {})
 
-    expect(result).toEqual({
-      success: false,
-      error: { type: 'UpstreamFailure', operation: 'postGraphQL' },
-    })
+    expect(result).toEqual(postGraphQLFailureResult)
   })
 
   it('returns an upstream failure when the body is not valid json', async () => {
@@ -78,10 +73,7 @@ describe('postGraphQL', () => {
 
     const result = await postGraphQL(fetchFn, GRAPHQL_URL, 'query { x }', {})
 
-    expect(result).toEqual({
-      success: false,
-      error: { type: 'UpstreamFailure', operation: 'postGraphQL' },
-    })
+    expect(result).toEqual(postGraphQLFailureResult)
   })
 
   it('returns an upstream failure when graphql reports errors', async () => {
@@ -95,10 +87,7 @@ describe('postGraphQL', () => {
 
     const result = await postGraphQL(fetchFn, GRAPHQL_URL, 'query { x }', {})
 
-    expect(result).toEqual({
-      success: false,
-      error: { type: 'UpstreamFailure', operation: 'postGraphQL' },
-    })
+    expect(result).toEqual(postGraphQLFailureResult)
   })
 
   it('returns an upstream failure when the response has no data field', async () => {
@@ -112,9 +101,6 @@ describe('postGraphQL', () => {
 
     const result = await postGraphQL(fetchFn, GRAPHQL_URL, 'query { x }', {})
 
-    expect(result).toEqual({
-      success: false,
-      error: { type: 'UpstreamFailure', operation: 'postGraphQL' },
-    })
+    expect(result).toEqual(postGraphQLFailureResult)
   })
 })
