@@ -22,9 +22,7 @@ import {
   WITHDRAW_MUTATION,
   type ReserveData,
   type ReserveResponse,
-  type SupplyResponse,
   type UserPositionsResponse,
-  type WithdrawResponse,
 } from './queries'
 
 export interface AaveProviderConfig {
@@ -230,22 +228,25 @@ export class AaveProvider {
     return { success: true, value: [position.value] }
   }
 
-  private async supply(
+  private async prepare<K extends 'supply' | 'withdraw'>(
+    mutation: string,
+    field: K,
     amount: number,
   ): Promise<Result<TransactionRequest, UpstreamFailure>> {
-    const response = await postGraphQL<SupplyResponse>(
+    const response = await postGraphQL<Record<K, TransactionRequest | null>>(
       this.config.fetchFn,
       GRAPHQL_URL,
-      SUPPLY_MUTATION,
+      mutation,
       this.transactionVariables(amount),
     )
     if (!response.success) {
       return response
     }
-    if (response.value.supply === null) {
+    const transaction = response.value[field]
+    if (transaction === null) {
       return this.upstream()
     }
-    return { success: true, value: response.value.supply }
+    return { success: true, value: transaction }
   }
 
   async depositCollateral(
@@ -254,25 +255,7 @@ export class AaveProvider {
     if (amount < 0) {
       return this.invalidAmount(amount)
     }
-    return this.supply(amount)
-  }
-
-  private async withdraw(
-    amount: number,
-  ): Promise<Result<TransactionRequest, UpstreamFailure>> {
-    const response = await postGraphQL<WithdrawResponse>(
-      this.config.fetchFn,
-      GRAPHQL_URL,
-      WITHDRAW_MUTATION,
-      this.transactionVariables(amount),
-    )
-    if (!response.success) {
-      return response
-    }
-    if (response.value.withdraw === null) {
-      return this.upstream()
-    }
-    return { success: true, value: response.value.withdraw }
+    return this.prepare(SUPPLY_MUTATION, 'supply', amount)
   }
 
   async withdrawCollateral(
@@ -300,7 +283,7 @@ export class AaveProvider {
         },
       }
     }
-    return this.withdraw(amount)
+    return this.prepare(WITHDRAW_MUTATION, 'withdraw', amount)
   }
 
   async settlePnl(_amount: number): Promise<Result<void, UpstreamFailure>> {

@@ -56,14 +56,6 @@ export const SUPPLY_MUTATION = `mutation Supply($market: EvmAddress!, $underlyin
   }
 }`
 
-export interface SupplyResponse {
-  supply: {
-    to: string
-    data: string
-    value: string
-  } | null
-}
-
 export const WITHDRAW_MUTATION = `mutation Withdraw($market: EvmAddress!, $underlyingToken: EvmAddress!, $chainId: ChainId!, $user: EvmAddress!, $amount: AmountAmount!) {
   withdraw(request: {market: $market, underlyingToken: $underlyingToken, chainId: $chainId, user: $user, amount: $amount}) {
     to
@@ -71,11 +63,3 @@ export const WITHDRAW_MUTATION = `mutation Withdraw($market: EvmAddress!, $under
     value
   }
 }`
-
-export interface WithdrawResponse {
-  withdraw: {
-    to: string
-    data: string
-    value: string
-  } | null
-}
