@@ -31,14 +31,18 @@ function failingCall(operation: string) {
   }))
 }
 
+function plainLayer(overrides: Partial<LiquidityProvider> = {}) {
+  const provider = fakeProvider(overrides)
+  return { provider, layer: new LiquidLayer(provider) }
+}
+
 describe('LiquidLayer', async () => {
   it('a consumer opens a long position through LiquidLayer without knowing the underlying liquidity provider', async () => {
     const openPosition = vi.fn(async () => ({
       success: true as const,
       value: preparedTx,
     }))
-    const provider = fakeProvider({ openPosition })
-    const layer = new LiquidLayer(provider)
+    const { layer } = plainLayer({ openPosition })
 
     const result = await layer.openPosition(aTrade().long().entryPrice(60000).build())
 
@@ -56,14 +60,13 @@ describe('LiquidLayer', async () => {
       success: true as const,
       value: preparedTx,
     }))
-    const provider = fakeProvider({
+    const { provider, layer } = plainLayer({
       closePosition,
       getPosition: vi.fn(async () => ({
         success: true as const,
         value: aPosition().id('pos-1').long().size(1).entryPrice(60000).build(),
       })),
     })
-    const layer = new LiquidLayer(provider)
 
     const result = await layer.closePosition('pos-1', 61000)
 
@@ -78,14 +81,13 @@ describe('LiquidLayer', async () => {
       success: true as const,
       value: preparedTx,
     }))
-    const provider = fakeProvider({
+    const { provider, layer } = plainLayer({
       closePosition,
       getPosition: vi.fn(async () => ({
         success: true as const,
         value: aPosition().id('pos-2').short().size(1).entryPrice(60000).build(),
       })),
     })
-    const layer = new LiquidLayer(provider)
 
     const result = await layer.closePosition('pos-2', 59000)
 
@@ -238,8 +240,7 @@ describe('LiquidLayer', async () => {
         value: aPosition().id(id).long().size(1).entryPrice(60000).build(),
       }),
     )
-    const provider = fakeProvider({ getPosition })
-    const layer = new LiquidLayer(provider)
+    const { layer } = plainLayer({ getPosition })
 
     const result = await layer.getPosition('pos-1')
 
@@ -261,8 +262,7 @@ describe('LiquidLayer', async () => {
         ],
       }),
     )
-    const provider = fakeProvider({ listPositions })
-    const layer = new LiquidLayer(provider)
+    const { layer } = plainLayer({ listPositions })
 
     expect(await layer.listPositions()).toEqual({
       success: true,
@@ -430,8 +430,7 @@ describe('LiquidLayer', async () => {
         ],
       }),
     )
-    const provider = fakeProvider({ listPositions })
-    const layer = new LiquidLayer(provider)
+    const { layer } = plainLayer({ listPositions })
 
     expect(await layer.listPositions()).toEqual({
       success: true,
@@ -515,8 +514,7 @@ describe('LiquidLayer', async () => {
 
   it('propagates an upstream failure when the collateral balance cannot be read', async () => {
     const getCollateralBalance = failingCall('getCollateralBalance')
-    const provider = fakeProvider({ getCollateralBalance })
-    const layer = new LiquidLayer(provider)
+    const { provider, layer } = plainLayer({ getCollateralBalance })
 
     expect(await layer.openPosition(aTrade().long().entryPrice(60000).build())).toEqual({
       success: false,
@@ -527,8 +525,7 @@ describe('LiquidLayer', async () => {
 
   it('propagates an upstream failure when the required margin cannot be read', async () => {
     const getRequiredMargin = failingCall('getRequiredMargin')
-    const provider = fakeProvider({ getRequiredMargin })
-    const layer = new LiquidLayer(provider)
+    const { provider, layer } = plainLayer({ getRequiredMargin })
 
     expect(await layer.openPosition(aTrade().long().entryPrice(60000).build())).toEqual({
       success: false,
@@ -539,8 +536,7 @@ describe('LiquidLayer', async () => {
 
   it('propagates an upstream failure when the funding rate cannot be read', async () => {
     const getFundingRate = failingCall('getFundingRate')
-    const provider = fakeProvider({ getFundingRate })
-    const layer = new LiquidLayer(provider)
+    const { provider, layer } = plainLayer({ getFundingRate })
 
     expect(await layer.payFunding('pos-1')).toEqual({
       success: false,
@@ -551,8 +547,7 @@ describe('LiquidLayer', async () => {
 
   it('propagates an upstream failure when a position cannot be read', async () => {
     const listPositions = failingCall('listPositions')
-    const provider = fakeProvider({ listPositions })
-    const layer = new LiquidLayer(provider)
+    const { layer } = plainLayer({ listPositions })
 
     expect(await layer.listPositions()).toEqual({
       success: false,
