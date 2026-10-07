@@ -11,11 +11,22 @@ import {
 } from '../../test-support/aave-fixtures'
 import { aTrade } from '../../test-support/trade-builder'
 import { AaveProvider } from './aave-provider'
+import type { FetchLike } from './graphql-client'
 import { GRAPHQL_URL } from './types'
 
 const MARKET = '0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2'
 const WETH = '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2'
 const USER = '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045'
+
+function aProvider(fetchFn: FetchLike, user: string = USER): AaveProvider {
+  return new AaveProvider({
+    fetchFn,
+    market: MARKET,
+    underlyingToken: WETH,
+    chainId: '1',
+    user,
+  })
+}
 
 describe('AaveProvider', () => {
   it('reads the required margin from the reserve max ltv', async () => {
@@ -26,13 +37,7 @@ describe('AaveProvider', () => {
       ): Promise<Response> =>
         new Response(JSON.stringify(reserveWethFixture), { status: 200 }),
     )
-    const provider = new AaveProvider({
-      fetchFn,
-      market: MARKET,
-      underlyingToken: WETH,
-      chainId: '1',
-      user: USER,
-    })
+    const provider = aProvider(fetchFn)
 
     const result = await provider.getRequiredMargin(
       aTrade().long().size(2).entryPrice(40250).build(),
@@ -65,13 +70,7 @@ describe('AaveProvider', () => {
       ): Promise<Response> =>
         new Response(JSON.stringify(reserveWethFixture), { status: 200 }),
     )
-    const provider = new AaveProvider({
-      fetchFn,
-      market: MARKET,
-      underlyingToken: WETH,
-      chainId: '1',
-      user: USER,
-    })
+    const provider = aProvider(fetchFn)
 
     const result = await provider.getMaintenanceMargin(
       aTrade().long().entryPrice(83000).build(),
@@ -91,13 +90,7 @@ describe('AaveProvider', () => {
       async (): Promise<Response> =>
         new Response('internal error', { status: 500 }),
     )
-    const provider = new AaveProvider({
-      fetchFn,
-      market: MARKET,
-      underlyingToken: WETH,
-      chainId: '1',
-      user: USER,
-    })
+    const provider = aProvider(fetchFn)
 
     const result = await provider.getRequiredMargin(
       aTrade().long().entryPrice(60000).build(),
@@ -117,13 +110,7 @@ describe('AaveProvider', () => {
       ): Promise<Response> =>
         new Response(JSON.stringify(reserveWethFixture), { status: 200 }),
     )
-    const provider = new AaveProvider({
-      fetchFn,
-      market: MARKET,
-      underlyingToken: WETH,
-      chainId: '1',
-      user: USER,
-    })
+    const provider = aProvider(fetchFn)
 
     const result = await provider.getFundingRate(Side.Long, 1, 60000)
 
@@ -144,13 +131,7 @@ describe('AaveProvider', () => {
           status: 200,
         }),
     )
-    const provider = new AaveProvider({
-      fetchFn,
-      market: MARKET,
-      underlyingToken: WETH,
-      chainId: '1',
-      user: USER,
-    })
+    const provider = aProvider(fetchFn)
 
     const result = await provider.getFundingRate(Side.Long, 1, 60000)
 
@@ -165,13 +146,7 @@ describe('AaveProvider', () => {
       async (): Promise<Response> =>
         new Response(JSON.stringify(reserveNotFoundFixture), { status: 200 }),
     )
-    const provider = new AaveProvider({
-      fetchFn,
-      market: MARKET,
-      underlyingToken: WETH,
-      chainId: '1',
-      user: USER,
-    })
+    const provider = aProvider(fetchFn)
 
     const result = await provider.getRequiredMargin(
       aTrade().long().entryPrice(60000).build(),
@@ -193,13 +168,7 @@ describe('AaveProvider', () => {
           status: 200,
         }),
     )
-    const provider = new AaveProvider({
-      fetchFn,
-      market: MARKET,
-      underlyingToken: WETH,
-      chainId: '1',
-      user: USER,
-    })
+    const provider = aProvider(fetchFn)
 
     const result = await provider.getCollateralBalance()
 
@@ -225,13 +194,7 @@ describe('AaveProvider', () => {
       async (): Promise<Response> =>
         new Response(JSON.stringify(userNoPositionFixture), { status: 200 }),
     )
-    const provider = new AaveProvider({
-      fetchFn,
-      market: MARKET,
-      underlyingToken: WETH,
-      chainId: '1',
-      user: USER,
-    })
+    const provider = aProvider(fetchFn)
 
     const result = await provider.getCollateralBalance()
 
@@ -243,13 +206,7 @@ describe('AaveProvider', () => {
       async (): Promise<Response> =>
         new Response(JSON.stringify(reserveNotFoundFixture), { status: 200 }),
     )
-    const provider = new AaveProvider({
-      fetchFn,
-      market: MARKET,
-      underlyingToken: WETH,
-      chainId: '1',
-      user: USER,
-    })
+    const provider = aProvider(fetchFn)
 
     const result = await provider.getCollateralBalance()
 
@@ -269,13 +226,10 @@ describe('AaveProvider', () => {
           status: 200,
         }),
     )
-    const provider = new AaveProvider({
+    const provider = aProvider(
       fetchFn,
-      market: MARKET,
-      underlyingToken: WETH,
-      chainId: '1',
-      user: '0x772439Ea39a64340DcD348618C15a483D0db4c18',
-    })
+      '0x772439Ea39a64340DcD348618C15a483D0db4c18',
+    )
     const positionId = `1:${MARKET}:${WETH}`
 
     const result = await provider.getPosition(positionId)
@@ -300,13 +254,10 @@ describe('AaveProvider', () => {
           status: 200,
         }),
     )
-    const provider = new AaveProvider({
+    const provider = aProvider(
       fetchFn,
-      market: MARKET,
-      underlyingToken: WETH,
-      chainId: '1',
-      user: '0x3FCA83e0Dec167f1348CB01c7dF5437F9ff6EBE6',
-    })
+      '0x3FCA83e0Dec167f1348CB01c7dF5437F9ff6EBE6',
+    )
     const positionId = `1:${MARKET}:${WETH}`
 
     const result = await provider.getPosition(positionId)
@@ -328,13 +279,10 @@ describe('AaveProvider', () => {
           status: 200,
         }),
     )
-    const provider = new AaveProvider({
+    const provider = aProvider(
       fetchFn,
-      market: MARKET,
-      underlyingToken: WETH,
-      chainId: '1',
-      user: '0x772439Ea39a64340DcD348618C15a483D0db4c18',
-    })
+      '0x772439Ea39a64340DcD348618C15a483D0db4c18',
+    )
 
     const result = await provider.getPosition('99:wrong:address')
 
@@ -350,13 +298,7 @@ describe('AaveProvider', () => {
       async (): Promise<Response> =>
         new Response(JSON.stringify(userNoPositionFixture), { status: 200 }),
     )
-    const provider = new AaveProvider({
-      fetchFn,
-      market: MARKET,
-      underlyingToken: WETH,
-      chainId: '1',
-      user: USER,
-    })
+    const provider = aProvider(fetchFn)
     const positionId = `1:${MARKET}:${WETH}`
 
     const result = await provider.getPosition(positionId)
@@ -377,13 +319,10 @@ describe('AaveProvider', () => {
           status: 200,
         }),
     )
-    const provider = new AaveProvider({
+    const provider = aProvider(
       fetchFn,
-      market: MARKET,
-      underlyingToken: WETH,
-      chainId: '1',
-      user: '0x772439Ea39a64340DcD348618C15a483D0db4c18',
-    })
+      '0x772439Ea39a64340DcD348618C15a483D0db4c18',
+    )
     const positionId = `1:${MARKET}:${WETH}`
 
     const result = await provider.listPositions()
@@ -405,13 +344,7 @@ describe('AaveProvider', () => {
       async (): Promise<Response> =>
         new Response(JSON.stringify(userNoPositionFixture), { status: 200 }),
     )
-    const provider = new AaveProvider({
-      fetchFn,
-      market: MARKET,
-      underlyingToken: WETH,
-      chainId: '1',
-      user: USER,
-    })
+    const provider = aProvider(fetchFn)
 
     const result = await provider.listPositions()
 
@@ -422,13 +355,7 @@ describe('AaveProvider', () => {
     const fetchFn = vi.fn(async (): Promise<Response> => {
       throw new Error('network should not be called')
     })
-    const provider = new AaveProvider({
-      fetchFn,
-      market: MARKET,
-      underlyingToken: WETH,
-      chainId: '1',
-      user: USER,
-    })
+    const provider = aProvider(fetchFn)
 
     const result = await provider.settlePnl(12.5)
 
@@ -440,13 +367,7 @@ describe('AaveProvider', () => {
     const fetchFn = vi.fn(async (): Promise<Response> => {
       throw new Error('network should not be called')
     })
-    const provider = new AaveProvider({
-      fetchFn,
-      market: MARKET,
-      underlyingToken: WETH,
-      chainId: '1',
-      user: USER,
-    })
+    const provider = aProvider(fetchFn)
 
     const result = await provider.settleFunding(0.42)
 
