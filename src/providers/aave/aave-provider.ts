@@ -133,11 +133,7 @@ export class AaveProvider {
     }
   }
 
-  async getFundingRate(
-    side: Side,
-    size: number,
-    entryPrice: number,
-  ): Promise<Result<number, UpstreamFailure>> {
+  async getFundingRate(): Promise<Result<number, UpstreamFailure>> {
     const reserve = await this.reserve()
     if (!reserve.success) {
       return reserve

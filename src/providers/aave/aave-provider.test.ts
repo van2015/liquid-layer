@@ -112,7 +112,7 @@ describe('AaveProvider', () => {
     )
     const provider = aProvider(fetchFn)
 
-    const result = await provider.getFundingRate(Side.Long, 1, 60000)
+    const result = await provider.getFundingRate()
 
     expect(result.success).toBe(true)
     if (result.success) {
@@ -133,7 +133,7 @@ describe('AaveProvider', () => {
     )
     const provider = aProvider(fetchFn)
 
-    const result = await provider.getFundingRate(Side.Long, 1, 60000)
+    const result = await provider.getFundingRate()
 
     expect(result).toEqual({
       success: false,
