@@ -17,7 +17,12 @@ import {
   upstreamFailure,
   type FetchLike,
 } from './graphql-client'
-import { GRAPHQL_URL } from './types'
+import {
+  GRAPHQL_URL,
+  type ReserveData,
+  type ReserveResponse,
+  type UserPositionsResponse,
+} from './types'
 import {
   CLOSE_POSITION_MUTATION,
   OPEN_POSITION_MUTATION,
@@ -25,9 +30,6 @@ import {
   SUPPLY_MUTATION,
   USER_POSITIONS_QUERY,
   WITHDRAW_MUTATION,
-  type ReserveData,
-  type ReserveResponse,
-  type UserPositionsResponse,
 } from './queries'
 
 export interface AaveProviderConfig {
