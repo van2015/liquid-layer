@@ -360,6 +360,23 @@ describe('AaveProvider', () => {
     })
   })
 
+  it('rejects a trade with a non-positive size without calling the api', async () => {
+    const fetchFn = vi.fn(async (): Promise<Response> => {
+      throw new Error('network should not be called')
+    })
+    const provider = aProvider(fetchFn)
+
+    const result = await provider.openPosition(
+      aTrade().long().size(0).entryPrice(40250).build(),
+    )
+
+    expect(result).toEqual({
+      success: false,
+      error: { type: 'InvalidSize', size: 0 },
+    })
+    expect(fetchFn).not.toHaveBeenCalled()
+  })
+
   it('prepares a close position transaction for the current short position', async () => {
     const fetchFn = respondingInSequence(
       userWethCollateralFixture,

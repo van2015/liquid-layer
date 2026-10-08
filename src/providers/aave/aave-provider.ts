@@ -297,6 +297,9 @@ export class AaveProvider implements LiquidityProvider {
   async openPosition(
     trade: Trade,
   ): Promise<Result<TransactionRequest, OpenPositionError>> {
+    if (trade.size <= 0) {
+      return { success: false, error: { type: 'InvalidSize', size: trade.size } }
+    }
     return this.prepare(
       OPEN_POSITION_MUTATION,
       'openPosition',
