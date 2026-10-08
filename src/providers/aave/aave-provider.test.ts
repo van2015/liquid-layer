@@ -12,6 +12,7 @@ import {
   supplyTxFixture,
   supplyMissingTxFixture,
   openPositionTxFixture,
+  closePositionTxFixture,
   withdrawTxFixture,
   withdrawMissingTxFixture,
   postGraphQLFailureResult,
@@ -356,6 +357,45 @@ describe('AaveProvider', () => {
       user: USER,
       side: 'long',
       amount: '80500',
+    })
+  })
+
+  it('prepares a close position transaction for the current short position', async () => {
+    const fetchFn = respondingInSequence(
+      userWethCollateralFixture,
+      closePositionTxFixture,
+    )
+    const provider = aProvider(fetchFn)
+
+    const result = await provider.closePosition(`1:${MARKET}:${WETH}`, 3000)
+
+    expect(result).toEqual({
+      success: true,
+      value: {
+        to: '0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2',
+        data: '0x441a3e700000000000000000000000000000000000000000000000000000000000000003',
+        value: '0',
+      },
+    })
+    expect(fetchFn).toHaveBeenCalledTimes(2)
+    const [, mutationCall] = fetchFn.mock.calls
+    const [url, init] = mutationCall!
+    expect(url).toBe(GRAPHQL_URL)
+    const body = JSON.parse(String(init?.body)) as {
+      query: string
+      variables: Record<string, string>
+    }
+    expect(body.query).toContain('mutation')
+    expect(body.query).toContain('closePosition(request:')
+    expect(body.variables).toEqual({
+      market: MARKET,
+      underlyingToken: WETH,
+      chainId: '1',
+      user: USER,
+      amount: '100',
+      side: 'short',
+      id: `1:${MARKET}:${WETH}`,
+      exitPrice: '3000',
     })
   })
 

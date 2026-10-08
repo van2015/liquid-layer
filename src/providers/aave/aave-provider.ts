@@ -2,6 +2,7 @@ import {
   Side,
   type InsufficientBalance,
   type InvalidAmount,
+  type OpenError,
   type OpenPositionError,
   type Position,
   type PositionNotFound,
@@ -17,6 +18,7 @@ import {
 } from './graphql-client'
 import { GRAPHQL_URL } from './types'
 import {
+  CLOSE_POSITION_MUTATION,
   OPEN_POSITION_MUTATION,
   RESERVE_QUERY,
   SUPPLY_MUTATION,
@@ -230,7 +232,9 @@ export class AaveProvider {
     return { success: true, value: [position.value] }
   }
 
-  private async prepare<K extends 'supply' | 'withdraw' | 'openPosition'>(
+  private async prepare<
+    K extends 'supply' | 'withdraw' | 'openPosition' | 'closePosition',
+  >(
     mutation: string,
     field: K,
     amount: number,
@@ -297,6 +301,26 @@ export class AaveProvider {
       'openPosition',
       trade.size * trade.entryPrice,
       { side: trade.side },
+    )
+  }
+
+  async closePosition(
+    id: string,
+    exitPrice: number,
+  ): Promise<Result<TransactionRequest, OpenError>> {
+    const position = await this.getPosition(id)
+    if (!position.success) {
+      return position
+    }
+    return this.prepare(
+      CLOSE_POSITION_MUTATION,
+      'closePosition',
+      position.value.size,
+      {
+        side: position.value.side,
+        id: position.value.id,
+        exitPrice: String(exitPrice),
+      },
     )
   }
 

@@ -71,3 +71,11 @@ export const OPEN_POSITION_MUTATION = `mutation OpenPosition($market: EvmAddress
     value
   }
 }`
+
+export const CLOSE_POSITION_MUTATION = `mutation ClosePosition($market: EvmAddress!, $underlyingToken: EvmAddress!, $chainId: ChainId!, $user: EvmAddress!, $side: Side!, $id: String!, $exitPrice: AmountAmount!, $amount: AmountAmount!) {
+  closePosition(request: {market: $market, underlyingToken: $underlyingToken, chainId: $chainId, user: $user, side: $side, id: $id, exitPrice: $exitPrice, amount: $amount}) {
+    to
+    data
+    value
+  }
+}`
