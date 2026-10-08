@@ -2,6 +2,7 @@ import {
   Side,
   type InsufficientBalance,
   type InvalidAmount,
+  type LiquidityProvider,
   type OpenError,
   type OpenPositionError,
   type Position,
@@ -37,7 +38,7 @@ export interface AaveProviderConfig {
   user: string
 }
 
-export class AaveProvider {
+export class AaveProvider implements LiquidityProvider {
   private readonly underlyingTokenKey: string
 
   constructor(private readonly config: AaveProviderConfig) {
