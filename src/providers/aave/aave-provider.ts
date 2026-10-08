@@ -300,6 +300,12 @@ export class AaveProvider implements LiquidityProvider {
     if (trade.size <= 0) {
       return { success: false, error: { type: 'InvalidSize', size: trade.size } }
     }
+    if (trade.entryPrice <= 0) {
+      return {
+        success: false,
+        error: { type: 'InvalidPrice', price: trade.entryPrice },
+      }
+    }
     return this.prepare(
       OPEN_POSITION_MUTATION,
       'openPosition',

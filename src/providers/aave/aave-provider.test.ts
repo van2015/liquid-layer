@@ -377,6 +377,23 @@ describe('AaveProvider', () => {
     expect(fetchFn).not.toHaveBeenCalled()
   })
 
+  it('rejects a trade with a non-positive entry price without calling the api', async () => {
+    const fetchFn = vi.fn(async (): Promise<Response> => {
+      throw new Error('network should not be called')
+    })
+    const provider = aProvider(fetchFn)
+
+    const result = await provider.openPosition(
+      aTrade().long().size(2).entryPrice(0).build(),
+    )
+
+    expect(result).toEqual({
+      success: false,
+      error: { type: 'InvalidPrice', price: 0 },
+    })
+    expect(fetchFn).not.toHaveBeenCalled()
+  })
+
   it('prepares a close position transaction for the current short position', async () => {
     const fetchFn = respondingInSequence(
       userWethCollateralFixture,
