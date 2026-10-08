@@ -63,3 +63,11 @@ export const WITHDRAW_MUTATION = `mutation Withdraw($market: EvmAddress!, $under
     value
   }
 }`
+
+export const OPEN_POSITION_MUTATION = `mutation OpenPosition($market: EvmAddress!, $underlyingToken: EvmAddress!, $chainId: ChainId!, $user: EvmAddress!, $side: Side!, $amount: AmountAmount!) {
+  openPosition(request: {market: $market, underlyingToken: $underlyingToken, chainId: $chainId, user: $user, side: $side, amount: $amount}) {
+    to
+    data
+    value
+  }
+}`

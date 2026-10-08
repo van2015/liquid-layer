@@ -2,6 +2,7 @@ import {
   Side,
   type InsufficientBalance,
   type InvalidAmount,
+  type OpenPositionError,
   type Position,
   type PositionNotFound,
   type Result,
@@ -16,6 +17,7 @@ import {
 } from './graphql-client'
 import { GRAPHQL_URL } from './types'
 import {
+  OPEN_POSITION_MUTATION,
   RESERVE_QUERY,
   SUPPLY_MUTATION,
   USER_POSITIONS_QUERY,
@@ -228,16 +230,17 @@ export class AaveProvider {
     return { success: true, value: [position.value] }
   }
 
-  private async prepare<K extends 'supply' | 'withdraw'>(
+  private async prepare<K extends 'supply' | 'withdraw' | 'openPosition'>(
     mutation: string,
     field: K,
     amount: number,
+    extraVariables: Record<string, string> = {},
   ): Promise<Result<TransactionRequest, UpstreamFailure>> {
     const response = await postGraphQL<Record<K, TransactionRequest | null>>(
       this.config.fetchFn,
       GRAPHQL_URL,
       mutation,
-      this.transactionVariables(amount),
+      { ...this.transactionVariables(amount), ...extraVariables },
     )
     if (!response.success) {
       return response
@@ -284,6 +287,17 @@ export class AaveProvider {
       }
     }
     return this.prepare(WITHDRAW_MUTATION, 'withdraw', amount)
+  }
+
+  async openPosition(
+    trade: Trade,
+  ): Promise<Result<TransactionRequest, OpenPositionError>> {
+    return this.prepare(
+      OPEN_POSITION_MUTATION,
+      'openPosition',
+      trade.size * trade.entryPrice,
+      { side: trade.side },
+    )
   }
 
   async settlePnl(_amount: number): Promise<Result<void, UpstreamFailure>> {

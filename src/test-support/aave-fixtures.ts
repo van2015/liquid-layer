@@ -54,6 +54,16 @@ export const userPositionsWithSupplyFixture = {
   },
 } as const
 
+export const openPositionTxFixture = {
+  data: {
+    openPosition: {
+      to: '0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2',
+      data: '0xa9059cbb0000000000000000000000000000000000000000000000000000000000000001',
+      value: '0',
+    },
+  },
+} as const
+
 export const supplyTxFixture = {
   data: {
     supply: {
